@@ -15,10 +15,10 @@ Using this state machine is very simple. Just define the states, the transitions
 ## Basic steps to create a State Machine
 
 1. Model your state machine inside a graphical editor e.g. UML tool or any other applicable graphic tool.
-2. Create an instance of the FSM class in your code.
-3. Transfer all your transitions from the graphic to the code.
-4. Register the action handlers for your states.
-5. Start the state machine.
+1. Create an instance of the FSM class in your code.
+1. Transfer all your transitions from the graphic to the code.
+1. Register the action handlers for your states.
+1. Start the state machine.
 
 ## How to ...
 
@@ -81,8 +81,12 @@ showingYellow
 // start the state machine
 fsm.start(1)
 
+assertThat(fsm.isRunning).isTrue
+
 // trigger an event
 fsm.trigger(Tick, 1)
+
+assertThat(fsm.currentState).isEqualTo(showingRedYellow)
 ```
 
 ## The classes
@@ -90,7 +94,8 @@ fsm.trigger(Tick, 1)
 ### FsmSync<T>
 
 A synchronous (blocking) state machine. The call to trigger is blocking. 
-- The type parameter defines the type of data to send to the machine when it is triggered or started.
+
+The type parameter defines the type of data to send to the machine when it is triggered or started.
 
 ```kotlin
 data class MyFsmData(
@@ -99,13 +104,18 @@ data class MyFsmData(
 )
 
 val fsm = FsmSync<MyFsmData>("MyFsm")
+
+// add states and transitions
+
+fsm.start(MyFsmData(42, "test"))
 ```
 
 ### FsmAsync<T>
 
-An asynchronous (non blocking) state machine. The call to trigger is non blocking. The events are 
+An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
 queued and triggered sequentially.
-- The type parameter defines the type of data to send to the machine when it is triggered or started.
+
+The type parameter defines the type of data to send to the machine when it is triggered or started.
 
 ```kotlin
 data class MyFsmData(
@@ -113,8 +123,10 @@ data class MyFsmData(
   val y: String,
 )
 
-runBlocking {
-  val fsm = FsmAsync<MyFsmData>("MyFsm", this.coroutineContext)
-}
+val fsm = FsmAsync<MyFsmData>("MyFsm")
+
+// add states and transitions
+
+fsm.start(MyFsmData(1, "2"))
 ```
 

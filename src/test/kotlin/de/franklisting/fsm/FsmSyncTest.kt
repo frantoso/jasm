@@ -5,7 +5,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import kotlin.test.Test
 
-class FsmTest {
+class FsmSyncTest {
     private object Event1 : Event()
 
     private lateinit var state1: State<Int>

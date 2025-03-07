@@ -6,13 +6,13 @@ import de.franklisting.fsm.FsmAsync
 import de.franklisting.fsm.FsmSync
 import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
-import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
 /**
  * The README.md is generated when the tests run.
  */
-@Suppress("ktlint:standard:unary-op-spacing", "UNUSED_VARIABLE")
+@Suppress("ktlint:standard:unary-op-spacing")
 class ReadmeGenerator {
     @Test
     fun `generate readme for this project`() {
@@ -122,15 +122,20 @@ class ReadmeGenerator {
                     // start the state machine
                     fsm.start(1)
 
+                    assertThat(fsm.isRunning).isTrue
+
                     // trigger an event
                     fsm.trigger(Tick, 1)
+
+                    assertThat(fsm.currentState).isEqualTo(showingRedYellow)
                 }
                 section("The classes")
                 subSection("FsmSync<T>")
                 +
                     """
                     A synchronous (blocking) state machine. The call to trigger is blocking. 
-                    - The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    
+                    The type parameter defines the type of data to send to the machine when it is triggered or started.
                     """.trimIndent()
                 example {
                     data class MyFsmData(
@@ -139,14 +144,19 @@ class ReadmeGenerator {
                     )
 
                     val fsm = FsmSync<MyFsmData>("MyFsm")
+
+                    // add states and transitions
+
+                    fsm.start(MyFsmData(42, "test"))
                 }
 
                 subSection("FsmAsync<T>")
                 +
                     """
-                    An asynchronous (non blocking) state machine. The call to trigger is non blocking. The events are 
+                    An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
                     queued and triggered sequentially.
-                    - The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    
+                    The type parameter defines the type of data to send to the machine when it is triggered or started.
                     """.trimIndent()
                 example {
                     data class MyFsmData(
@@ -154,9 +164,11 @@ class ReadmeGenerator {
                         val y: String,
                     )
 
-                    runBlocking {
-                        val fsm = FsmAsync<MyFsmData>("MyFsm", this.coroutineContext)
-                    }
+                    val fsm = FsmAsync<MyFsmData>("MyFsm")
+
+                    // add states and transitions
+
+                    fsm.start(MyFsmData(1, "2"))
                 }
             }
 

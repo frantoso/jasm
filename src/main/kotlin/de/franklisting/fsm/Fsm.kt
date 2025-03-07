@@ -1,6 +1,7 @@
 package de.franklisting.fsm
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -189,7 +190,7 @@ class FsmSync<T>(
 
 class FsmAsync<T>(
     name: String,
-    override val coroutineContext: CoroutineContext,
+    override val coroutineContext: CoroutineContext = CoroutineScope(Dispatchers.Default.limitedParallelism(1)).coroutineContext,
 ) : Fsm<T>(name),
     CoroutineScope {
     /**
