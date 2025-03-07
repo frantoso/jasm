@@ -22,14 +22,15 @@ class FsmAsyncTest {
         fsm.initialTransition(state1)
         state1.transition(Event1, state2).entry {
             println(it)
-            Thread.sleep(500)
+            Thread.sleep(100)
         }
         state2.transition(Event1, state2).entry {
             println(it)
-            Thread.sleep(500)
+            Thread.sleep(100)
         }
         state2.transition(Event2, fsm.final)
-        fsm.onStateChanged = { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") }
+        fsm.onStateChanged =
+            { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") }
 
         fsm.start(1)
 
@@ -38,12 +39,12 @@ class FsmAsyncTest {
                 val timeInMillis =
                     measureTimeMillis {
                         while (fsm.isRunning) {
-                            delay(100)
+                            delay(10)
                         }
                     }
                 println("fsm task (${Thread.currentThread().threadId()}) has run.")
 
-                assertThat(timeInMillis).isGreaterThan(6000)
+                assertThat(timeInMillis).isGreaterThan(1200)
             }
 
             launch {

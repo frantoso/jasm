@@ -117,12 +117,14 @@ abstract class Fsm<T>(
         trigger: Event,
         data: T,
     ): Boolean {
-        checkParameter(trigger)
+        synchronized(this) {
+            checkParameter(trigger)
 
-        val changeStateData = currentState.trigger(trigger, data)
-        activateState(changeStateData, data)
+            val changeStateData = currentState.trigger(trigger, data)
+            activateState(changeStateData, data)
 
-        return changeStateData.handled
+            return changeStateData.handled
+        }
     }
 
     /**
@@ -196,6 +198,8 @@ class FsmAsync<T>(
     /**
      * The mutex to synchronize the placing of the events.
      * It is initially locked and will be unlocked when the state machine is started.
+     * Because the trigger method is synchronized, the mutex is not necessary for synchronization - it only blocks
+     * triggering events before calling fsm.start().
      */
     private val mutex = Mutex(true)
 
