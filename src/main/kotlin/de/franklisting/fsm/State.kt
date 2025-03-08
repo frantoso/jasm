@@ -290,7 +290,7 @@ open class State<T> protected constructor(
      *
      * @param data The data object.
      */
-    private fun startChildren(data: T) {
+    internal fun startChildren(data: T) {
         activeChildren.clear()
         children.forEach { startChild(it, data) }
     }

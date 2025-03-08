@@ -131,6 +131,7 @@ class FsmSyncTest {
             { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") }
 
         fsm.start(1)
+        fsm.onTriggered = { machine, state, event, handled -> println("$machine - $state - $event - $handled") }
 
         runBlocking {
             launch {
