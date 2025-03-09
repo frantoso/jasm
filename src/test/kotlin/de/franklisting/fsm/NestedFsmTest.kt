@@ -117,7 +117,7 @@ class NestedFsmTest {
     fun `generates a graph from the state machine`() {
         val generator = MultipleDiagramGenerator(TrafficLight().fsmMain)
 
-        generator.toSvg("build/reports/traffic-light.svg")
-        generator.toPng("build/reports/traffic-light.png")
+        generator.toSvg("build/reports/traffic-light.svg", 1000)
+        generator.toPng("build/reports/traffic-light.png", 1000)
     }
 }
