@@ -1,5 +1,6 @@
 package de.franklisting.fsm
 
+import de.franklisting.fsm.testutil.DiagramGenerator
 import de.franklisting.fsm.testutil.TestData
 import de.franklisting.fsm.testutil.testStateChange
 import org.assertj.core.api.Assertions.assertThat
@@ -111,4 +112,12 @@ class SimpleFsmTest {
                     testStateChange(trafficLight.fsm, data)
                 }
             }
+
+    @Test
+    fun `generates a graph from the state machine`() {
+        val generator = DiagramGenerator(TrafficLight().fsm)
+
+        generator.toSvg("build/reports/simple-traffic-light.svg")
+        generator.toPng("build/reports/simple-traffic-light.png")
+    }
 }
