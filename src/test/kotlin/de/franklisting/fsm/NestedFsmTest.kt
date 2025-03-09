@@ -14,9 +14,9 @@ class NestedFsmTest {
     private val parameters = Parameters()
 
     class TrafficLight {
-        val fsmMain = FsmSync<Parameters>("traffic light controller")
-        val fsmDay = FsmSync<Parameters>("traffic light day mode")
-        val fsmNight = FsmSync<Parameters>("traffic light night mode")
+        val fsmMain = FsmSync<Parameters>("TrafficLightController")
+        val fsmDay = FsmSync<Parameters>("ControllingDayMode")
+        val fsmNight = FsmSync<Parameters>("ControllingNightMode")
 
         init {
             setupFsmDayMode()

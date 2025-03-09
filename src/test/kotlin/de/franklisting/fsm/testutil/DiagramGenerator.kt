@@ -176,16 +176,17 @@ class DiagramGenerator<T>(
                 .render(format)
                 .toFile(File(fileName))
         }
+
+        private val <T>Transition<T>.label
+            get() =
+                Label.of(
+                    when (trigger::class) {
+                        StartEvent::class, NoEvent::class -> ""
+                        else -> trigger.name
+                    },
+                )
+
+        private fun <T> Node.use(transition: Transition<T>): Link =
+            Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
     }
-
-    private val <T>Transition<T>.label
-        get() =
-            Label.of(
-                when (trigger::class) {
-                    StartEvent::class, NoEvent::class -> ""
-                    else -> trigger.name
-                },
-            )
-
-    private fun <T> Node.use(transition: Transition<T>): Link = Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
 }

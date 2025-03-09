@@ -1,5 +1,7 @@
 package de.franklisting.fsm
 
+import kotlinx.atomicfu.atomic
+
 /**
  * This class represents a particular state of the state machine.
  * Initializes a new instance of the State class.
@@ -508,7 +510,7 @@ open class State<T> protected constructor(
     /**
      * Gets a unique identifier of this object.
      */
-    val id = super.toString()
+    val id = "State_%04d".format(instanceCounter.getAndIncrement())
 
     /**
      * Gets an object implementing the debug interface. This allows the access to special functions which are mainly
@@ -520,6 +522,10 @@ open class State<T> protected constructor(
 
             override val childDump: List<Fsm<T>> get() = children.toList()
         }
+
+    companion object {
+        private val instanceCounter = atomic(0)
+    }
 }
 
 /**

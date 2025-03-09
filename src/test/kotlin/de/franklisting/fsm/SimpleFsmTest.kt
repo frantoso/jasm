@@ -17,14 +17,13 @@ class SimpleFsmTest {
     private val trafficLight = TrafficLight()
 
     class TrafficLight {
-        val fsm = FsmSync<Int>("simple traffic light")
+        val fsm = FsmSync<Int>("TrafficLight")
         val showingRed = State<Int>("ShowingRed")
         val showingRedYellow = State<Int>("ShowingRedYellow")
         val showingYellow = State<Int>("ShowingYellow")
         val showingGreen = State<Int>("ShowingGreen")
 
         init {
-
             fsm.initialTransition(showingRed)
             showingRed
                 .entry { println("x--    $it") }
