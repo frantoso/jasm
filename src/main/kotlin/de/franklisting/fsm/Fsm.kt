@@ -20,7 +20,7 @@ abstract class Fsm<T>(
     /**
      * Gets the initial state.
      */
-    private val initial: State<T> = InitialState()
+    internal val initial: State<T> = InitialState()
 
     /**
      * Gets the name of the currently active state.

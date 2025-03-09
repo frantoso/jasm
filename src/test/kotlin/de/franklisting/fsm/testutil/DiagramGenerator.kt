@@ -64,8 +64,8 @@ class DiagramGenerator<T>(
     internal val states: List<State<T>> = findStates()
 
     private fun findStates(): List<State<T>> {
-        val states = mutableSetOf(fsm.currentState)
-        findStates(states, fsm.currentState.debugInterface.transitionDump)
+        val states = mutableSetOf(fsm.initial)
+        findStates(states, fsm.initial.debugInterface.transitionDump)
         return states.toList()
     }
 

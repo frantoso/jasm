@@ -8,6 +8,7 @@ import de.franklisting.fsm.FsmAsync
 import de.franklisting.fsm.FsmSync
 import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
+import de.franklisting.fsm.testutil.DiagramGenerator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -19,6 +20,50 @@ import kotlin.test.Test
  */
 @Suppress("ktlint:standard:unary-op-spacing")
 class ReadmeGenerator {
+    private val fsmFileName = "images/traffic_light_simple.svg"
+
+    @Test
+    fun `test a simple state machine`() {
+        // BEGIN_FSM_CODE_SNIPPET
+        // create the state machine
+        val fsm = FsmSync<Int>("simple traffic light")
+
+        // create the states...
+        val showingRed = State<Int>("ShowingRed")
+        val showingRedYellow = State<Int>("ShowingRedYellow")
+        val showingYellow = State<Int>("ShowingYellow")
+        val showingGreen = State<Int>("ShowingGreen")
+
+        // define the transitions...
+        fsm.initialTransition(showingRed)
+        showingRed
+            .entry { println("x--    $it") }
+            .transition(Tick, showingRedYellow)
+        showingRedYellow
+            .entry { println("xx-    $it") }
+            .transition(Tick, showingGreen)
+        showingGreen
+            .entry { println("--x    $it") }
+            .transition(Tick, showingYellow)
+        showingYellow
+            .entry { println("-x-    $it") }
+            .transition(Tick, showingRed)
+
+        // start the state machine
+        fsm.start(1)
+
+        assertThat(fsm.isRunning).isTrue
+
+        // trigger an event
+        fsm.trigger(Tick, 1)
+
+        assertThat(fsm.currentState).isEqualTo(showingRedYellow)
+        // END_FSM_CODE_SNIPPET
+
+        // generate diagram picture - only for the README
+        DiagramGenerator(fsm).toSvg(fsmFileName)
+    }
+
     @Test
     fun `generate readme for this project`() {
         val k4ERepo =
@@ -95,45 +140,15 @@ class ReadmeGenerator {
                 subSection("Start with the model of the state machine")
                 +
                     """
-                    ![Simple state machine](images/traffic_light_simple.png)  
+                    ![Simple state machine]($fsmFileName)  
                     *A simple traffic light with four states, starting with showing the red light.*
                     """.trimIndent()
                 subSection("Create the state machine and the states")
-                example {
-                    // create the state machine
-                    val fsm = FsmSync<Int>("simple traffic light")
+                exampleFromSnippet(
+                    sourceFileName = "src/test/kotlin/de/franklisting/fsm/doc/ReadmeGenerator.kt",
+                    snippetId = "FSM_CODE_SNIPPET",
+                )
 
-                    // create the states...
-                    val showingRed = State<Int>("ShowingRed")
-                    val showingRedYellow = State<Int>("ShowingRedYellow")
-                    val showingYellow = State<Int>("ShowingYellow")
-                    val showingGreen = State<Int>("ShowingGreen")
-
-                    // define the transitions...
-                    fsm.initialTransition(showingRed)
-                    showingRed
-                        .entry { println("x--    $it") }
-                        .transition(Tick, showingRedYellow)
-                    showingRedYellow
-                        .entry { println("xx-    $it") }
-                        .transition(Tick, showingGreen)
-                    showingGreen
-                        .entry { println("--x    $it") }
-                        .transition(Tick, showingYellow)
-                    showingYellow
-                        .entry { println("-x-    $it") }
-                        .transition(Tick, showingRed)
-
-                    // start the state machine
-                    fsm.start(1)
-
-                    assertThat(fsm.isRunning).isTrue
-
-                    // trigger an event
-                    fsm.trigger(Tick, 1)
-
-                    assertThat(fsm.currentState).isEqualTo(showingRedYellow)
-                }
                 section("The classes")
                 subSection("FsmSync<T>")
                 +

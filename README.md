@@ -48,7 +48,7 @@ The example shows the modelling of a single traffic light.
 
 ### Start with the model of the state machine
 
-![Simple state machine](images/traffic_light_simple.png)  
+![Simple state machine](images/traffic_light_simple.svg)  
 *A simple traffic light with four states, starting with showing the red light.*
 
 ### Create the state machine and the states
