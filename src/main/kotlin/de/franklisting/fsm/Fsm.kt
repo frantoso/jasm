@@ -1,6 +1,7 @@
 package de.franklisting.fsm
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -19,7 +20,7 @@ abstract class Fsm<T>(
     /**
      * Gets the initial state.
      */
-    private val initial: State<T> = InitialState()
+    internal val initial: State<T> = InitialState()
 
     /**
      * Gets the name of the currently active state.
@@ -33,7 +34,15 @@ abstract class Fsm<T>(
      * This event is fired before the OnEntry handler of the state is called.
      * It should be used mainly for informational purpose.
      */
-    var onStateChanged: ((Fsm<T>, from: State<T>, to: State<T>) -> Unit)? = null
+    var onStateChanged: ((sender: Fsm<T>, from: State<T>, to: State<T>) -> Unit)? = null
+
+    /**
+     * Informs about a trigger of an event.
+     *
+     * This event is fired before a state is changed.
+     * It should be used mainly for informational purpose.
+     */
+    var onTriggered: ((sender: Fsm<T>, currentState: State<T>, event: Event, handled: Boolean) -> Unit)? = null
 
     /**
      * Gets the final state.
@@ -85,6 +94,11 @@ abstract class Fsm<T>(
     }
 
     /**
+     * Returns a string representation of the FSM - it's name.
+     */
+    override fun toString(): String = name
+
+    /**
      * Fires the Do event.
      *
      * @param data The data object.
@@ -116,12 +130,15 @@ abstract class Fsm<T>(
         trigger: Event,
         data: T,
     ): Boolean {
-        checkParameter(trigger)
+        synchronized(this) {
+            checkParameter(trigger)
 
-        val changeStateData = currentState.trigger(trigger, data)
-        activateState(changeStateData, data)
+            val changeStateData = currentState.trigger(trigger, data)
+            raiseTriggered(trigger, changeStateData.handled)
+            activateState(changeStateData, data)
 
-        return changeStateData.handled
+            return changeStateData.handled
+        }
     }
 
     /**
@@ -157,6 +174,78 @@ abstract class Fsm<T>(
         newState: State<T>,
     ) = onStateChanged?.invoke(this, oldState, newState)
 
+    /**
+     * Raises the triggered event.
+     *
+     * @param event The event which was processed.
+     * @param handled A value indicating whether the event was handled (true) or not (false).
+     */
+    private fun raiseTriggered(
+        event: Event,
+        handled: Boolean,
+    ) = onTriggered?.invoke(this, currentState, event, handled)
+
+    /**
+     * This interface provides methods which are not intended to use for normal operation.
+     * Use the methods for testing purposes or to recover from a reboot.
+     */
+    interface Debug<T> {
+        /**
+         * Should set the provided state as active state.
+         * @param state The state to set as current state.
+         */
+        fun setState(state: State<T>)
+
+        /**
+         * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
+         *  - IMPORTANT: This method does not call the entry function of the state.
+         * @param state The state to set as current state.
+         * @param data The data object.
+         */
+        fun resume(
+            state: State<T>,
+            data: T,
+        )
+    }
+
+    /**
+     * Sets the provided state as active state.
+     * @param state The state to set as current state.
+     */
+    private fun setState(state: State<T>) {
+        val stateBefore = currentState
+        currentState = state
+        raiseStateChanged(stateBefore, currentState)
+    }
+
+    /**
+     * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
+     *  - IMPORTANT: This method does not call the entry function of the state.
+     * @param state The state to set as current state.
+     * @param data The data object.
+     */
+    private fun resume(
+        state: State<T>,
+        data: T,
+    ) {
+        setState(state)
+        state.startChildren(data)
+    }
+
+    /**
+     * Gets an object implementing the debug interface. This allows the access to special functions which are mainly
+     * provided for tests.
+     */
+    val debugInterface =
+        object : Debug<T> {
+            override fun setState(state: State<T>) = this@Fsm.setState(state)
+
+            override fun resume(
+                state: State<T>,
+                data: T,
+            ) = this@Fsm.resume(state, data)
+        }
+
     companion object {
         /**
          * Checks whether the provided parameter is valid.
@@ -189,12 +278,14 @@ class FsmSync<T>(
 
 class FsmAsync<T>(
     name: String,
-    override val coroutineContext: CoroutineContext,
+    override val coroutineContext: CoroutineContext = CoroutineScope(Dispatchers.Default.limitedParallelism(1)).coroutineContext,
 ) : Fsm<T>(name),
     CoroutineScope {
     /**
      * The mutex to synchronize the placing of the events.
      * It is initially locked and will be unlocked when the state machine is started.
+     * Because the trigger method is synchronized, the mutex is not necessary for synchronization - it only blocks
+     * triggering events before calling fsm.start().
      */
     private val mutex = Mutex(true)
 

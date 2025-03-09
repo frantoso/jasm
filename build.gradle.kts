@@ -15,6 +15,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.25.1")
     testImplementation("io.mockk:mockk:1.13.11")
     testImplementation("com.github.jillesvangurp:kotlin4example:1.1.6")
+    testImplementation("guru.nidi:graphviz-java-all-j2v8:0.18.1")
 }
 
 repositories {

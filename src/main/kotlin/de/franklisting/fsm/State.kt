@@ -106,10 +106,16 @@ open class State<T> protected constructor(
         get() = activeChildren.isNotEmpty()
 
     /**
-     * Gets a value indicating whether this state has active child machines.
+     * Gets a value indicating whether this state has transitions.
      */
     val hasTransitions: Boolean
         get() = transitions.isNotEmpty()
+
+    /**
+     * Gets a value indicating whether this state has child machines.
+     */
+    val hasChildren: Boolean
+        get() = children.isNotEmpty()
 
     /**
      * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
@@ -290,7 +296,7 @@ open class State<T> protected constructor(
      *
      * @param data The data object.
      */
-    private fun startChildren(data: T) {
+    internal fun startChildren(data: T) {
         activeChildren.clear()
         children.forEach { startChild(it, data) }
     }
@@ -482,6 +488,38 @@ open class State<T> protected constructor(
             throw FsmException(message, name, ex)
         }
     }
+
+    /**
+     * This interface provides methods which are not intended to use for normal operation.
+     * Use the methods for testing or diagnosis purposes.
+     */
+    interface Debug<T> {
+        /**
+         * Gets a snapshot of the transitions.
+         */
+        val transitionDump: List<Transition<T>>
+
+        /**
+         * Gets a snapshot of the child machines.
+         */
+        val childDump: List<Fsm<T>>
+    }
+
+    /**
+     * Gets a unique identifier of this object.
+     */
+    val id = super.toString()
+
+    /**
+     * Gets an object implementing the debug interface. This allows the access to special functions which are mainly
+     * provided for test and diagnosis.
+     */
+    val debugInterface =
+        object : Debug<T> {
+            override val transitionDump: List<Transition<T>> get() = transitions.toList()
+
+            override val childDump: List<Fsm<T>> get() = children.toList()
+        }
 }
 
 /**

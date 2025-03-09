@@ -2,9 +2,20 @@ package de.franklisting.fsm
 
 /**
  * Class representing an event.
+ * @param name The name of this event. If there is no name provided, the name of the class is used.
  */
-abstract class Event {
-    val name = this::class.simpleName ?: ""
+abstract class Event(
+    name: String = "",
+) {
+    /**
+     * Gets the name of this event.
+     */
+    val name: String = name.ifBlank { this::class.simpleName ?: "" }
+
+    /**
+     * Returns a string representation of the event - it's name.
+     */
+    override fun toString(): String = name
 }
 
 /**

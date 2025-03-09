@@ -10,7 +10,7 @@ package de.franklisting.fsm
  * @param guard Condition handler of this transition.
  * @param endPoint A reference to the end point of this transition.
  */
-internal class Transition<T>(
+data class Transition<T>(
     val trigger: Event,
     val endPoint: TransitionEndPoint<T>,
     val guard: (T) -> Boolean,
