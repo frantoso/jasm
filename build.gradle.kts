@@ -7,6 +7,7 @@ plugins {
     id("org.jmailen.kotlinter") version "5.0.1"
     id("org.jetbrains.kotlinx.kover") version "0.9.1"
     id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.kotlinx.atomicfu") version "0.27.0"
 }
 
 dependencies {

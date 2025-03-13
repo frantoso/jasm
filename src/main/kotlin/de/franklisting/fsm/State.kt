@@ -1,5 +1,7 @@
 package de.franklisting.fsm
 
+import kotlinx.atomicfu.atomic
+
 /**
  * This class acts as base for all states of the state machine.
  * @param name The name of the state.
@@ -15,7 +17,11 @@ abstract class StateBase(
     /**
      * Gets a unique identifier of this object.
      */
-    val id = super.toString()
+    val id = "State_%04d".format(instanceCounter.getAndIncrement())
+
+    companion object {
+        private val instanceCounter = atomic(0)
+    }
 }
 
 /**
