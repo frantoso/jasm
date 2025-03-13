@@ -6,21 +6,21 @@ import kotlin.test.Test
 class ChangeStateDataTest {
     @Test
     fun getHandled1() {
-        val data = ChangeStateData<Int>(true)
+        val data = ChangeStateData(true)
         assertThat(data.handled).isTrue
-        assertThat(data.endPoint.state.isInvalid).isTrue
+        assertThat(data.endPoint).isNull()
     }
 
     @Test
     fun getHandled2() {
-        val data = ChangeStateData<Int>(false)
+        val data = ChangeStateData(false)
         assertThat(data.handled).isFalse
-        assertThat(data.endPoint.state.isInvalid).isTrue
+        assertThat(data.endPoint).isNull()
     }
 
     @Test
     fun getHandled3() {
-        val endPoint = TransitionEndPoint<Int>(FinalState())
+        val endPoint = TransitionEndPoint(FinalState())
         val data = ChangeStateData(true, endPoint)
         assertThat(data.handled).isTrue
         assertThat(data.endPoint).isSameAs(endPoint)

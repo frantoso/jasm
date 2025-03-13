@@ -14,27 +14,45 @@ class FsmSyncTest {
 
     private object Event2 : Event()
 
-    private lateinit var state1: State<Int>
-    private lateinit var state2: State<Int>
+    private lateinit var state1: State
+    private lateinit var state2: State
+    private lateinit var stateContainer1: StateContainer<Int>
+    private lateinit var stateContainer2: StateContainer<Int>
     private lateinit var fsm: FsmSync<Int>
+
+    private var doInStateResult = 0
 
     @BeforeEach
     fun createFsm() {
-        fsm = FsmSync("fsm")
         state1 = State("first")
         state2 = State("second")
-        fsm.initialTransition(state1)
-        state1.transition(Event1, state2)
-        state2.transition(Event1, fsm.final)
+        stateContainer1 = state1.transition<Int>(Event1, state2).doInState { i -> doInStateResult = i }
+        stateContainer2 = state2.transition(Event1, FinalState())
+
+        fsm =
+            FsmSync(
+                "fsm",
+                { _, _, _ -> },
+                { _, _, _, _ -> },
+                stateContainer1,
+                listOf(stateContainer2),
+            )
     }
 
     @Test
     fun `creates a new state machine`() {
-        val fsm = FsmSync<Int>("myFsm")
+        val fsm =
+            FsmSync<Int>(
+                "myFsm",
+                { _, _, _ -> },
+                { _, _, _, _ -> },
+                state1.toContainer(),
+                emptyList(),
+            )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.isInitial).isTrue
-        assertThat(fsm.currentState.isFinal).isFalse
+        assertThat(fsm.currentState.state is InitialState).isTrue
+        assertThat(fsm.currentState.state is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -46,14 +64,9 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState).isSameAs(state1)
-        assertThat(fsm.currentState.isInitial).isFalse
-        assertThat(fsm.currentState.isFinal).isFalse
-    }
-
-    @Test
-    fun `throws an exception when adding a second initial transition`() {
-        assertThatThrownBy { fsm.initialTransition(state2) }.isInstanceOf(FsmException::class.java)
+        assertThat(fsm.currentState.state).isSameAs(state1)
+        assertThat(fsm.currentState.state is InitialState).isFalse
+        assertThat(fsm.currentState.state is FinalState).isFalse
     }
 
     @Test
@@ -64,9 +77,9 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState).isSameAs(state2)
-        assertThat(fsm.currentState.isInitial).isFalse
-        assertThat(fsm.currentState.isFinal).isFalse
+        assertThat(fsm.currentState.state).isSameAs(state2)
+        assertThat(fsm.currentState.state is InitialState).isFalse
+        assertThat(fsm.currentState.state is FinalState).isFalse
     }
 
     @Test
@@ -78,9 +91,8 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isTrue
-        assertThat(fsm.currentState).isSameAs(fsm.final)
-        assertThat(fsm.currentState.isInitial).isFalse
-        assertThat(fsm.currentState.isFinal).isTrue
+        assertThat(fsm.currentState.state is InitialState).isFalse
+        assertThat(fsm.currentState.state is FinalState).isTrue
     }
 
     @Test
@@ -92,46 +104,126 @@ class FsmSyncTest {
 
     @Test
     fun `doAction triggers the action in state`() {
-        var result = 0
-        state1.doInState { i -> result = i }
+        doInStateResult = 0
         fsm.start(42)
 
         fsm.doAction(22)
 
-        assertThat(result).isEqualTo(22)
+        assertThat(doInStateResult).isEqualTo(22)
     }
 
     @Test
-    fun `using InvalidState as end point throws an exception`() {
-        val fsm = FsmSync<Int>("fsm")
-        val state1 = InvalidState<Int>()
+    fun `adds a destination only state to the states list`() {
+        val state1 = State("first")
+        val state2 = State("second")
+        val state3 = State("third")
 
-        assertThatThrownBy { fsm.initialTransition(state1) }.isInstanceOf(FsmException::class.java)
-        assertThatThrownBy { state1.transition(Event1, state1) }.isInstanceOf(FsmException::class.java)
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1
+                    .transition<Int>(Event1, state2)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+                state2
+                    .transition<Int>(Event1, state2)
+                    .transition(Event2, state3)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+            )
+
+        assertThat(fsm.debugInterface.stateDump.map { it.state }).contains(state3)
     }
 
     @Test
-    fun `triggers events synchronous`() {
-        val fsm = FsmSync<Int>("myFsm")
+    fun `adds a destination only state only once to the states list`() {
+        val state1 = State("first")
+        val state2 = State("second")
+        val state3 = State("third")
 
-        val state1 = State<Int>("first")
-        val state2 = State<Int>("second")
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1
+                    .transition<Int>(Event1, state2)
+                    .transition(Event2, state3)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+                state2
+                    .transition<Int>(Event1, state2)
+                    .transition(Event2, state3)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+            )
 
-        fsm.initialTransition(state1)
-        state1.transition(Event1, state2).entry {
-            println(it)
-            Thread.sleep(100)
-        }
-        state2.transition(Event1, state2).entry {
-            println(it)
-            Thread.sleep(100)
-        }
-        state2.transition(Event2, fsm.final)
-        fsm.onStateChanged =
-            { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") }
+        assertThat(
+            fsm.debugInterface.stateDump
+                .map { it.state }
+                .filter { it == state3 },
+        ).hasSize(1)
+    }
+
+    @Test
+    fun `adds more than one destination only state to the states list`() {
+        val state1 = State("first")
+        val state2 = State("second")
+        val state3 = State("third")
+        val state4 = State("fourth")
+
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1
+                    .transition<Int>(Event1, state2)
+                    .transition(Event2, state4)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+                state2
+                    .transition<Int>(Event1, state2)
+                    .transition(Event2, state3)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    },
+            )
+
+        assertThat(fsm.debugInterface.stateDump.map { it.state }).contains(state3)
+        assertThat(fsm.debugInterface.stateDump.map { it.state }).contains(state4)
+    }
+
+    @Test
+    fun `triggers events synchronously`() {
+        val state1 = State("first")
+        val state2 = State("second")
+
+        val fsm =
+            fsmOf(
+                "myFsm",
+                { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
+                { machine, state, event, handled -> println("$machine - $state - $event - $handled") },
+                state1.transition<Int>(Event1, state2).entry {
+                    println(it)
+                    Thread.sleep(100)
+                },
+                state2
+                    .transition<Int>(Event1, state2)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    }.transition(Event2, FinalState()),
+            )
 
         fsm.start(1)
-        fsm.onTriggered = { machine, state, event, handled -> println("$machine - $state - $event - $handled") }
 
         runBlocking {
             launch {

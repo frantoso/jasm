@@ -12,11 +12,11 @@ package de.franklisting.fsm
  */
 data class Transition<T>(
     val trigger: Event,
-    val endPoint: TransitionEndPoint<T>,
+    val endPoint: TransitionEndPoint,
     val guard: (T) -> Boolean,
 ) {
     /**
      * Gets a value indicating whether the end point is the final state.
      */
-    val isToFinal = this.endPoint.state.isFinal
+    val isToFinal = this.endPoint.state is FinalState
 }

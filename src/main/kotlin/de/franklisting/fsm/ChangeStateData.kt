@@ -7,7 +7,7 @@ package de.franklisting.fsm
  * @param handled A value indicating whether an event was handled.
  * @param endPoint The new end point to change to.
  */
-class ChangeStateData<T>(
+class ChangeStateData(
     val handled: Boolean,
-    val endPoint: TransitionEndPoint<T> = TransitionEndPoint(InvalidState<T>()),
+    val endPoint: TransitionEndPoint? = null,
 )

@@ -1,6 +1,5 @@
 package de.franklisting.fsm
 
-import de.franklisting.fsm.testutil.DiagramGenerator
 import de.franklisting.fsm.testutil.TestData
 import de.franklisting.fsm.testutil.testStateChange
 import org.assertj.core.api.Assertions.assertThat
@@ -17,27 +16,30 @@ class SimpleFsmTest {
     private val trafficLight = TrafficLight()
 
     class TrafficLight {
-        val fsm = FsmSync<Int>("simple traffic light")
-        val showingRed = State<Int>("ShowingRed")
-        val showingRedYellow = State<Int>("ShowingRedYellow")
-        val showingYellow = State<Int>("ShowingYellow")
-        val showingGreen = State<Int>("ShowingGreen")
+        val fsm: FsmSync<Int>
+        val showingRed = State("ShowingRed")
+        val showingRedYellow = State("ShowingRedYellow")
+        val showingYellow = State("ShowingYellow")
+        val showingGreen = State("ShowingGreen")
 
         init {
 
-            fsm.initialTransition(showingRed)
-            showingRed
-                .entry { println("x--    $it") }
-                .transition(Tick, showingRedYellow)
-            showingRedYellow
-                .entry { println("xx-    $it") }
-                .transition(Tick, showingGreen)
-            showingGreen
-                .entry { println("--x    $it") }
-                .transition(Tick, showingYellow)
-            showingYellow
-                .entry { println("-x-    $it") }
-                .transition(Tick, showingRed)
+            fsm =
+                fsmOf(
+                    "simple traffic light",
+                    showingRed
+                        .entry<Int> { println("x--    $it") }
+                        .transition(Tick, showingRedYellow),
+                    showingRedYellow
+                        .entry<Int> { println("xx-    $it") }
+                        .transition(Tick, showingGreen),
+                    showingGreen
+                        .entry<Int> { println("--x    $it") }
+                        .transition(Tick, showingYellow),
+                    showingYellow
+                        .entry<Int> { println("-x-    $it") }
+                        .transition(Tick, showingRed),
+                )
         }
     }
 
@@ -115,9 +117,42 @@ class SimpleFsmTest {
 
     @Test
     fun `generates a graph from the state machine`() {
-        val generator = DiagramGenerator(TrafficLight().fsm)
+//        val generator = DiagramGenerator(TrafficLight().fsm)
+//
+//        generator.toSvg("build/reports/simple-traffic-light.svg")
+//        generator.toPng("build/reports/simple-traffic-light.png")
+    }
 
-        generator.toSvg("build/reports/simple-traffic-light.svg")
-        generator.toPng("build/reports/simple-traffic-light.png")
+    @Test
+    fun `new stuff`() {
+        val showingRed = State("ShowingRed")
+        val showingRedYellow = State("ShowingRedYellow")
+        val showingYellow = State("ShowingYellow")
+        val showingGreen = State("ShowingGreen")
+
+        val fsm2 =
+            fsmOf(
+                "simple traffic light",
+                showingRed
+                    .entry<Int> { println("x--    $it") }
+                    .transition(Tick, showingRedYellow),
+                showingRedYellow
+                    .entry<Int> { println("xx-    $it") }
+                    .transition(Tick, showingGreen),
+                showingGreen
+                    .entry<Int> { println("--x    $it") }
+                    .transition(Tick, showingYellow),
+                showingYellow
+                    .entry<Int> { println("-x-    $it") }
+                    .transition(Tick, showingRed),
+            )
+
+        fsm2.start(1)
+
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
     }
 }

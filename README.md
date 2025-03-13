@@ -55,28 +55,32 @@ The example shows the modelling of a single traffic light.
 
 ```kotlin
 // create the state machine
-val fsm = FsmSync<Int>("simple traffic light")
 
 // create the states...
-val showingRed = State<Int>("ShowingRed")
-val showingRedYellow = State<Int>("ShowingRedYellow")
-val showingYellow = State<Int>("ShowingYellow")
-val showingGreen = State<Int>("ShowingGreen")
+val showingRed = State("ShowingRed")
+val showingRedYellow = State("ShowingRedYellow")
+val showingYellow = State("ShowingYellow")
+val showingGreen = State("ShowingGreen")
 
-// define the transitions...
-fsm.initialTransition(showingRed)
-showingRed
-  .entry { println("x--  $it") }
-  .transition(Tick, showingRedYellow)
-showingRedYellow
-  .entry { println("xx-  $it") }
-  .transition(Tick, showingGreen)
-showingGreen
-  .entry { println("--x  $it") }
-  .transition(Tick, showingYellow)
-showingYellow
-  .entry { println("-x-  $it") }
-  .transition(Tick, showingRed)
+// create the state machine...
+val fsm =
+  fsmOf(
+    "simple traffic light",
+    // define initial state with transitions and other parameters...
+    showingRed
+      .entry<Int> { println("x--  $it") }
+      .transition(Tick, showingRedYellow),
+    // define other states with transitions and other parameters...
+    showingRedYellow
+      .entry<Int> { println("xx-  $it") }
+      .transition(Tick, showingGreen),
+    showingGreen
+      .entry<Int> { println("--x  $it") }
+      .transition(Tick, showingYellow),
+    showingYellow
+      .entry<Int> { println("-x-  $it") }
+      .transition(Tick, showingRed),
+  )
 
 // start the state machine
 fsm.start(1)
@@ -86,7 +90,7 @@ assertThat(fsm.isRunning).isTrue
 // trigger an event
 fsm.trigger(Tick, 1)
 
-assertThat(fsm.currentState).isEqualTo(showingRedYellow)
+assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
 ```
 
 ## The classes
@@ -103,9 +107,13 @@ data class MyFsmData(
   val y: String,
 )
 
-val fsm = FsmSync<MyFsmData>("MyFsm")
-
-// add states and transitions
+val state = State("MyState")
+val fsm =
+  fsmOf(
+    "MyFsm",
+    // add at minimum one state
+    state.transitionToFinal<MyFsmData>(Tick),
+  )
 
 fsm.start(MyFsmData(42, "test"))
 ```
@@ -123,9 +131,13 @@ data class MyFsmData(
   val y: String,
 )
 
-val fsm = FsmAsync<MyFsmData>("MyFsm")
-
-// add states and transitions
+val state = State("MyState")
+val fsm =
+  fsmAsyncOf(
+    "MyFsm",
+    // add at minimum one state
+    state.transitionToFinal<MyFsmData>(Tick),
+  )
 
 fsm.start(MyFsmData(1, "2"))
 ```
@@ -143,29 +155,48 @@ Following example shows the difference. The code is identically, only the type o
  different.
 
 ```kotlin
+val output = mutableListOf<String>()
 val event1 = object : Event() {}
 val event2 = object : Event() {}
+val state1 = State("first")
+val state2 = State("second")
+
+fun createFsmSync(): FsmSync<Int> =
+  fsmOf(
+    "MySyncFsm",
+    state1
+      .transition<Int>(event1, state2)
+      .entry {
+        output.addLast("- $it")
+        Thread.sleep(100)
+      },
+    state2
+      .transition<Int>(event1, state2)
+      .entry {
+        output.addLast("- $it")
+        Thread.sleep(100)
+      }.transitionToFinal(event2),
+  )
+
+fun createFsmAsync(): FsmAsync<Int> =
+  fsmAsyncOf(
+    "MyAsyncFsm",
+    state1
+      .transition<Int>(event1, state2)
+      .entry {
+        output.addLast("- $it")
+        Thread.sleep(100)
+      },
+    state2
+      .transition<Int>(event1, state2)
+      .entry {
+        output.addLast("- $it")
+        Thread.sleep(100)
+      }.transitionToFinal(event2),
+  )
 
 fun runFsm(fsm: Fsm<Int>): List<String> {
-  val output = mutableListOf<String>()
-
-  val state1 = State<Int>("first")
-  val state2 = State<Int>("second")
-
-  fsm.initialTransition(state1)
-  state1
-    .transition(event1, state2)
-    .entry {
-      output.addLast("- $it")
-      Thread.sleep(100)
-    }
-  state2
-    .transition(event1, state2)
-    .entry {
-      output.addLast("- $it")
-      Thread.sleep(100)
-    }.transition(event2, fsm.final)
-
+  output.clear()
   fsm.start(1)
 
   runBlocking {
@@ -198,13 +229,13 @@ fun runFsm(fsm: Fsm<Int>): List<String> {
     println(it)
   }
 
-  return output
+  return output.toList()
 }
 
-val outputAsync = runFsm(FsmAsync("myFsm"))
+val outputAsync = runFsm(createFsmAsync())
 assertThat(outputAsync.takeLast(10).filter { it.startsWith("+") }).hasSize(0)
 
-val outputSync = runFsm(FsmSync("myFsm"))
+val outputSync = runFsm(createFsmSync())
 assertThat(outputSync.takeLast(5).filter { it.startsWith("+") }.size)
   .isGreaterThanOrEqualTo(2)
 ```
