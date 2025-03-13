@@ -1,6 +1,5 @@
 package de.franklisting.fsm
 
-import de.franklisting.fsm.testutil.MultipleDiagramGenerator
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
