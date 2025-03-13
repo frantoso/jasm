@@ -5,7 +5,19 @@ import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
-class StateTest {
+class StateContainerTest {
+    private object TestEvent : Event()
+
+    private object StopEvent : Event()
+
+//    private fun getStateWithChild(): State<Int> {
+//        val state = spyk(State<Int>(TEST_STATE_1_NAME), recordPrivateCalls = true)
+//        val fsm = FsmSync<Int>(FSM_NAME)
+//        state.child(fsm)
+//        state.start(42, History.None)
+//
+//        return state
+//    }
 
     @Test
     fun `verify normal state`() {
