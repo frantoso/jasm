@@ -1,5 +1,7 @@
 package de.franklisting.fsm
 
+import java.util.Collections
+
 /**
  * This class models the behavior of a state of the state machine. It encapsulates a state and stores all it's
  * transitions, children and action functions.
@@ -22,7 +24,7 @@ abstract class StateContainerBase<TData, TState : IState>(
     /**
      * The list of currently working child state machines.
      */
-    private val activeChildren = ArrayList<FsmSync<TData>>()
+    private val activeChildren = Collections.synchronizedList(ArrayList<FsmSync<TData>>())
 
     /**
      * Gets a value indicating whether this state has active child machines.
@@ -201,14 +203,7 @@ abstract class StateContainerBase<TData, TState : IState>(
     private fun triggerChildren(
         trigger: Event,
         data: TData,
-    ): Boolean {
-        var handled = false
-        activeChildren
-            .toList()
-            .forEach { handled = handled or triggerChild(it, trigger, data) }
-
-        return handled
-    }
+    ): Boolean = activeChildren.toList().any { triggerChild(it, trigger, data) }
 
     /**
      * Triggers the specified child machine.
