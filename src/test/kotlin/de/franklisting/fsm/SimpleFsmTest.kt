@@ -28,16 +28,20 @@ class SimpleFsmTest {
                 fsmOf(
                     "simple traffic light",
                     showingRed
-                        .entry<Int> { println("x--    $it") }
+                        .with<Int>()
+                        .entry { println("x--    $it") }
                         .transition(Tick, showingRedYellow),
                     showingRedYellow
-                        .entry<Int> { println("xx-    $it") }
+                        .with<Int>()
+                        .entry { println("xx-    $it") }
                         .transition(Tick, showingGreen),
                     showingGreen
-                        .entry<Int> { println("--x    $it") }
+                        .with<Int>()
+                        .entry { println("--x    $it") }
                         .transition(Tick, showingYellow),
                     showingYellow
-                        .entry<Int> { println("-x-    $it") }
+                        .with<Int>()
+                        .entry { println("-x-    $it") }
                         .transition(Tick, showingRed),
                 )
         }
@@ -134,16 +138,20 @@ class SimpleFsmTest {
             fsmOf(
                 "simple traffic light",
                 showingRed
-                    .entry<Int> { println("x--    $it") }
+                    .with<Int>()
+                    .entry { println("x--    $it") }
                     .transition(Tick, showingRedYellow),
                 showingRedYellow
-                    .entry<Int> { println("xx-    $it") }
+                    .with<Int>()
+                    .entry { println("xx-    $it") }
                     .transition(Tick, showingGreen),
                 showingGreen
-                    .entry<Int> { println("--x    $it") }
+                    .with<Int>()
+                    .entry { println("--x    $it") }
                     .transition(Tick, showingYellow),
                 showingYellow
-                    .entry<Int> { println("-x-    $it") }
+                    .with<Int>()
+                    .entry { println("-x-    $it") }
                     .transition(Tick, showingRed),
             )
 

@@ -28,11 +28,13 @@ class NestedFsmTest {
                 fsmOf(
                     "traffic light controller",
                     controllingDayMode
-                        .entry<Parameters> { println("starting day mode    $it") }
+                        .with<Parameters>()
+                        .entry { println("starting day mode    $it") }
                         .transition(NoEvent, controllingNightMode)
                         .child(fsmDay),
                     controllingNightMode
-                        .entry<Parameters> { println("starting night mode    $it") }
+                        .with<Parameters>()
+                        .entry { println("starting night mode    $it") }
                         .transition(NoEvent, controllingDayMode)
                         .child(fsmNight),
                 )
@@ -47,16 +49,20 @@ class NestedFsmTest {
             return fsmOf(
                 "traffic light day mode",
                 showingRed
-                    .entry<Parameters> { println("x--    $it") }
+                    .with<Parameters>()
+                    .entry { println("x--    $it") }
                     .transition(Tick, showingRedYellow),
                 showingRedYellow
-                    .entry<Parameters> { println("xx-    $it") }
+                    .with<Parameters>()
+                    .entry { println("xx-    $it") }
                     .transition(Tick, showingGreen),
                 showingGreen
-                    .entry<Parameters> { println("--x    $it") }
+                    .with<Parameters>()
+                    .entry { println("--x    $it") }
                     .transition(Tick, showingYellow),
                 showingYellow
-                    .entry<Parameters> { println("-x-    $it") }
+                    .with<Parameters>()
+                    .entry { println("-x-    $it") }
                     .transition(Tick, showingRed) { it.isDayMode }
                     .transition(Tick, FinalState()) { !it.isDayMode },
             )
@@ -69,11 +75,13 @@ class NestedFsmTest {
             return fsmOf(
                 "traffic light night mode",
                 showingYellow
-                    .entry<Parameters> { println("x--    $it") }
+                    .with<Parameters>()
+                    .entry { println("x--    $it") }
                     .transition(Tick, showingNothing) { !it.isDayMode }
                     .transition(Tick, FinalState()) { it.isDayMode },
                 showingNothing
-                    .entry<Parameters> { println("xx-    $it") }
+                    .with<Parameters>()
+                    .entry { println("xx-    $it") }
                     .transition(Tick, showingYellow),
             )
         }

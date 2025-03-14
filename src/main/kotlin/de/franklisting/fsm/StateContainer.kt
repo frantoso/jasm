@@ -54,8 +54,11 @@ abstract class StateContainerBase<TData, TState : IState>(
         data: TData,
         history: History,
     ) {
-        if (history.isHistory && tryStartHistory(data)) {
-            return
+        println("$history - ${history.isHistory}")
+        if (history.isHistory) {
+            if (tryStartHistory(data)) {
+                return
+            }
         }
 
         if (history.isDeepHistory && tryStartDeepHistory()) {
@@ -232,13 +235,13 @@ abstract class StateContainerBase<TData, TState : IState>(
      * Fires the OnEntry event.
      * @param data The data object.
      */
-    private fun fireOnEntry(data: TData) = fire(onEntry, data, "State.OnEntry")
+    internal fun fireOnEntry(data: TData) = fire(onEntry, data, "State.OnEntry")
 
     /**
      * Fires the OnExit event.
      * @param data The data object.
      */
-    private fun fireOnExit(data: TData) = fire(onExit, data, "State.OnExit")
+    internal fun fireOnExit(data: TData) = fire(onExit, data, "State.OnExit")
 
     /**
      * Calls one of the actions of the state.
@@ -250,12 +253,10 @@ abstract class StateContainerBase<TData, TState : IState>(
         handler: (TData) -> Unit,
         data: TData,
         actionName: String,
-    ) {
-        try {
-            handler(data)
-        } catch (ex: Throwable) {
-            throw FsmException("Error calling the $actionName action", state.name, ex)
-        }
+    ) = try {
+        handler(data)
+    } catch (ex: Throwable) {
+        throw FsmException("Error calling the $actionName action", state.name, ex)
     }
 
     /**
@@ -289,21 +290,6 @@ abstract class StateContainerBase<TData, TState : IState>(
 
             override val childDump: List<Fsm<TData>> get() = children.toList()
         }
-
-    companion object {
-        /**
-         * Creates a new transition.
-         * @param trigger The Event that initiates this transition.
-         * @param endPoint A reference to the end point of this transition.
-         * @param guard Condition handler of this transition.
-         * @return Returns the new transition as list.
-         */
-        internal fun <T> createTransition(
-            trigger: Event,
-            endPoint: TransitionEndPoint,
-            guard: (T) -> Boolean,
-        ): List<Transition<T>> = listOf(Transition(trigger, endPoint, guard))
-    }
 }
 
 /**
@@ -399,7 +385,7 @@ class StateContainer<TData>(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + createTransition(trigger, TransitionEndPoint(stateTo), guard),
+            transitions = transitions + Transition(trigger, stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
             onDoInState = onDoInState,
@@ -420,7 +406,7 @@ class StateContainer<TData>(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + createTransition(trigger, endPoint, guard),
+            transitions = transitions + Transition(trigger, endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
             onDoInState = onDoInState,
@@ -439,25 +425,11 @@ class StateContainer<TData>(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + createTransition(trigger, TransitionEndPoint(FinalState()), guard),
+            transitions = transitions + Transition(trigger, FinalState(), guard),
             onEntry = onEntry,
             onExit = onExit,
             onDoInState = onDoInState,
         )
-
-    companion object {
-        /**
-         * Adds a new transition to the state.
-         * @param trigger The Event that initiates this transition.
-         * @param endPoint A reference to the end point of this transition.
-         * @param guard Condition handler of this transition.
-         */
-        internal fun <T> createTransition(
-            trigger: Event,
-            endPoint: TransitionEndPoint,
-            guard: (T) -> Boolean,
-        ): List<Transition<T>> = listOf(Transition(trigger, endPoint, guard))
-    }
 }
 
 /**
@@ -475,21 +447,10 @@ class InitialStateContainer<TData>(
      * @param stateTo A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    fun transition(stateTo: State): InitialStateContainer<TData> =
+    fun transition(stateTo: EndState): InitialStateContainer<TData> =
         InitialStateContainer(
             state = state,
-            transitions = transitions + listOf(Transition(StartEvent, TransitionEndPoint(stateTo)) { true }),
-        )
-
-    /**
-     * Adds a new transition to the state.
-     * @param endPoint A reference to the end point of this transition.
-     * @return Returns a new state container.
-     */
-    fun transition(endPoint: TransitionEndPoint): InitialStateContainer<TData> =
-        InitialStateContainer(
-            state = state,
-            transitions = transitions + listOf(Transition(StartEvent, endPoint) { true }),
+            transitions = listOf(Transition(StartEvent, stateTo) { true }),
         )
 }
 
@@ -505,7 +466,7 @@ class FinalStateContainer<TData>(
 /**
  * Encapsulates a normal state in a container.
  */
-fun <T> State.toContainer(): StateContainer<T> =
+fun <T> State.with(): StateContainer<T> =
     StateContainer(
         state = this,
         children = emptyList(),
@@ -518,144 +479,9 @@ fun <T> State.toContainer(): StateContainer<T> =
 /**
  * Encapsulates a final state in a container.
  */
-fun <T> FinalState.toContainer(): FinalStateContainer<T> = FinalStateContainer(state = this)
+fun <T> FinalState.with(): FinalStateContainer<T> = FinalStateContainer(state = this)
 
 /**
- * Adds a new transition to the state.
- * @param stateTo A reference to the end point of this transition.
- * @return Returns a new state container.
+ * Encapsulates a final state in a container.
  */
-fun <T> InitialState.transition(stateTo: EndState): InitialStateContainer<T> {
-    val t = listOf(Transition<T>(StartEvent, TransitionEndPoint(stateTo)) { true })
-    return InitialStateContainer(
-        state = this,
-        transitions = t,
-    )
-}
-
-/**
- * Adds a new child machine.
- * @param fsm The child to add.
- * @return Returns a new state container.
- */
-fun <T> State.child(fsm: FsmSync<T>): StateContainer<T> =
-    StateContainer(
-        state = this,
-        children = listOf(fsm),
-        transitions = emptyList(),
-        onEntry = {},
-        onExit = {},
-        onDoInState = {},
-    )
-
-/**
- * Adds a new transition to the state.
- * @param trigger The Event that initiates this transition.
- * @param stateTo A reference to the end point of this transition.
- * @param guard Condition handler of this transition.
- * @return Returns a new state container.
- */
-fun <T> State.transition(
-    trigger: Event,
-    stateTo: EndState,
-    guard: (T) -> Boolean = { true },
-): StateContainer<T> {
-    val t = StateContainerBase.createTransition(trigger, TransitionEndPoint(stateTo), guard)
-    return StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = t,
-        onEntry = {},
-        onExit = {},
-        onDoInState = {},
-    )
-}
-
-/**
- * Adds a new transition to the final state.
- * @param trigger The Event that initiates this transition.
- * @param guard Condition handler of this transition.
- * @return Returns a state container.
- */
-fun <T> State.transitionToFinal(
-    trigger: Event,
-    guard: (T) -> Boolean = { true },
-): StateContainer<T> {
-    val t = StateContainerBase.createTransition(trigger, TransitionEndPoint(FinalState()), guard)
-    return StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = t,
-        onEntry = {},
-        onExit = {},
-        onDoInState = {},
-    )
-}
-
-/**
- * Adds a new transition to the state.
- * @param trigger The Event that initiates this transition.
- * @param guard Condition handler of this transition.
- * @param endPoint A reference to the end point of this transition.
- * @return Returns a new state container.
- */
-fun <T> State.transition(
-    trigger: Event,
-    endPoint: TransitionEndPoint,
-    guard: (T) -> Boolean = { true },
-): StateContainer<T> {
-    val t = StateContainerBase.createTransition(trigger, endPoint, guard)
-    return StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = t,
-        onEntry = {},
-        onExit = {},
-        onDoInState = {},
-    )
-}
-
-/**
- * Sets the handler method for the states entry action.
- * @param action The handler method for the states entry action.
- * @return Returns a new state container.
- */
-fun <T> State.entry(action: (T) -> Unit): StateContainer<T> =
-    StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = emptyList(),
-        onEntry = action,
-        onExit = {},
-        onDoInState = {},
-    )
-
-/**
- * Sets the handler method for the states exit action.
- * @param action The handler method for the states exit action.
- * @return Returns a new state container.
- */
-fun <T> State.exit(action: (T) -> Unit): StateContainer<T> =
-    StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = emptyList(),
-        onEntry = {},
-        onExit = action,
-        onDoInState = {},
-    )
-
-/**
- * Sets the handler method for the states do action.
- * @param action The handler method for the states do action.
- * @return Returns a new state container.
- */
-fun <T> State.doInState(action: (T) -> Unit): StateContainer<T> =
-    StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = emptyList(),
-        onEntry = {},
-        onExit = {},
-        onDoInState = action,
-    )
+fun <T> InitialState.with(): InitialStateContainer<T> = InitialStateContainer(state = this, transitions = emptyList())

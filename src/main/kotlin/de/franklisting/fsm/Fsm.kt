@@ -31,7 +31,7 @@ abstract class Fsm<T>(
     /**
      * Gets the initial state.
      */
-    private val initial: InitialStateContainer<T> = InitialState().transition(startState.state)
+    private val initial: InitialStateContainer<T> = InitialState().with<T>().transition(startState.state)
 
     /**
      * A list of all states excluding the initial state.
@@ -46,7 +46,7 @@ abstract class Fsm<T>(
         if (otherStates.flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
             emptyList()
         } else {
-            listOf(FinalState().toContainer())
+            listOf(FinalState().with())
         }
 
     /**
@@ -65,7 +65,7 @@ abstract class Fsm<T>(
                 }.distinct()
                 .filterIsInstance<State>()
                 .filterNot { state -> knownStates.map { it.state }.contains(state) }
-                .map { it.toContainer<T>() }
+                .map { it.with<T>() }
                 .toList()
         }
 

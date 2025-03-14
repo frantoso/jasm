@@ -22,12 +22,13 @@ class FsmAsyncTest {
                 name = "myFsm",
                 { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
                 { _, _, _, _ -> },
-                state1.transition<Int>(Event1, state2).entry {
+                state1.with<Int>().transition(Event1, state2).entry {
                     println(it)
                     Thread.sleep(100)
                 },
                 state2
-                    .transition<Int>(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .entry {
                         println(it)
                         Thread.sleep(100)

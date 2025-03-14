@@ -8,11 +8,9 @@ import de.franklisting.fsm.FsmAsync
 import de.franklisting.fsm.FsmSync
 import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
-import de.franklisting.fsm.entry
 import de.franklisting.fsm.fsmAsyncOf
 import de.franklisting.fsm.fsmOf
-import de.franklisting.fsm.transition
-import de.franklisting.fsm.transitionToFinal
+import de.franklisting.fsm.with
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -43,17 +41,21 @@ class ReadmeGenerator {
                 "simple traffic light",
                 // define initial state with transitions and other parameters...
                 showingRed
-                    .entry<Int> { println("x--    $it") }
+                    .with<Int>()
+                    .entry { println("x--    $it") }
                     .transition(Tick, showingRedYellow),
                 // define other states with transitions and other parameters...
                 showingRedYellow
-                    .entry<Int> { println("xx-    $it") }
+                    .with<Int>()
+                    .entry { println("xx-    $it") }
                     .transition(Tick, showingGreen),
                 showingGreen
-                    .entry<Int> { println("--x    $it") }
+                    .with<Int>()
+                    .entry { println("--x    $it") }
                     .transition(Tick, showingYellow),
                 showingYellow
-                    .entry<Int> { println("-x-    $it") }
+                    .with<Int>()
+                    .entry { println("-x-    $it") }
                     .transition(Tick, showingRed),
             )
 
@@ -176,7 +178,9 @@ class ReadmeGenerator {
                         fsmOf(
                             "MyFsm",
                             // add at minimum one state
-                            state.transitionToFinal<MyFsmData>(Tick),
+                            state
+                                .with<MyFsmData>()
+                                .transitionToFinal(Tick),
                         )
 
                     fsm.start(MyFsmData(42, "test"))
@@ -201,7 +205,9 @@ class ReadmeGenerator {
                         fsmAsyncOf(
                             "MyFsm",
                             // add at minimum one state
-                            state.transitionToFinal<MyFsmData>(Tick),
+                            state
+                                .with<MyFsmData>()
+                                .transitionToFinal(Tick),
                         )
 
                     fsm.start(MyFsmData(1, "2"))
@@ -231,13 +237,15 @@ class ReadmeGenerator {
                         fsmOf(
                             "MySyncFsm",
                             state1
-                                .transition<Int>(event1, state2)
+                                .with<Int>()
+                                .transition(event1, state2)
                                 .entry {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
                                 },
                             state2
-                                .transition<Int>(event1, state2)
+                                .with<Int>()
+                                .transition(event1, state2)
                                 .entry {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
@@ -248,13 +256,15 @@ class ReadmeGenerator {
                         fsmAsyncOf(
                             "MyAsyncFsm",
                             state1
-                                .transition<Int>(event1, state2)
+                                .with<Int>()
+                                .transition(event1, state2)
                                 .entry {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
                                 },
                             state2
-                                .transition<Int>(event1, state2)
+                                .with<Int>()
+                                .transition(event1, state2)
                                 .entry {
                                     output.addLast("- $it")
                                     Thread.sleep(100)

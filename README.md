@@ -68,17 +68,21 @@ val fsm =
     "simple traffic light",
     // define initial state with transitions and other parameters...
     showingRed
-      .entry<Int> { println("x--  $it") }
+      .with<Int>()
+      .entry { println("x--  $it") }
       .transition(Tick, showingRedYellow),
     // define other states with transitions and other parameters...
     showingRedYellow
-      .entry<Int> { println("xx-  $it") }
+      .with<Int>()
+      .entry { println("xx-  $it") }
       .transition(Tick, showingGreen),
     showingGreen
-      .entry<Int> { println("--x  $it") }
+      .with<Int>()
+      .entry { println("--x  $it") }
       .transition(Tick, showingYellow),
     showingYellow
-      .entry<Int> { println("-x-  $it") }
+      .with<Int>()
+      .entry { println("-x-  $it") }
       .transition(Tick, showingRed),
   )
 
@@ -112,7 +116,9 @@ val fsm =
   fsmOf(
     "MyFsm",
     // add at minimum one state
-    state.transitionToFinal<MyFsmData>(Tick),
+    state
+      .with<MyFsmData>()
+      .transitionToFinal(Tick),
   )
 
 fsm.start(MyFsmData(42, "test"))
@@ -136,7 +142,9 @@ val fsm =
   fsmAsyncOf(
     "MyFsm",
     // add at minimum one state
-    state.transitionToFinal<MyFsmData>(Tick),
+    state
+      .with<MyFsmData>()
+      .transitionToFinal(Tick),
   )
 
 fsm.start(MyFsmData(1, "2"))
@@ -165,13 +173,15 @@ fun createFsmSync(): FsmSync<Int> =
   fsmOf(
     "MySyncFsm",
     state1
-      .transition<Int>(event1, state2)
+      .with<Int>()
+      .transition(event1, state2)
       .entry {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .transition<Int>(event1, state2)
+      .with<Int>()
+      .transition(event1, state2)
       .entry {
         output.addLast("- $it")
         Thread.sleep(100)
@@ -182,13 +192,15 @@ fun createFsmAsync(): FsmAsync<Int> =
   fsmAsyncOf(
     "MyAsyncFsm",
     state1
-      .transition<Int>(event1, state2)
+      .with<Int>()
+      .transition(event1, state2)
       .entry {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .transition<Int>(event1, state2)
+      .with<Int>()
+      .transition(event1, state2)
       .entry {
         output.addLast("- $it")
         Thread.sleep(100)
