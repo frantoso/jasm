@@ -24,6 +24,8 @@ Using this state machine is very simple. Just define the states, the transitions
 
 - [Get it.](#gradle)
 - [Implementing a simple Finite State Machine.](#how-to-create-a-simple-state-machine)
+- [The Classes.](#the-classes)
+- [Synchronous vs Asynchronous.](#synchronous-vs-asynchronous)
 
 ### Gradle
 
@@ -68,9 +70,9 @@ val fsm =
     "simple traffic light",
     // define initial state with transitions and other parameters...
     showingRed
-      .with<Int>()
-      .entry { println("x--  $it") }
-      .transition(Tick, showingRedYellow),
+      .with<Int>() // associate the event data type with the state
+      .entry { println("x--  $it") } // add an entry function
+      .transition(Tick, showingRedYellow), // add one or more transitions
     // define other states with transitions and other parameters...
     showingRedYellow
       .with<Int>()
@@ -103,7 +105,8 @@ assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
 
 A synchronous (blocking) state machine. The call to trigger is blocking. 
 
-The type parameter defines the type of data to send to the machine when it is triggered or started.
+The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+A value of this type must be provided at the call of start() or trigger().
 
 ```kotlin
 data class MyFsmData(
@@ -129,7 +132,8 @@ fsm.start(MyFsmData(42, "test"))
 An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
 queued and triggered sequentially.
 
-The type parameter defines the type of data to send to the machine when it is triggered or started.
+The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+A value of this type must be provided at the call of start() or trigger().
 
 ```kotlin
 data class MyFsmData(

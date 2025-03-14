@@ -32,6 +32,11 @@ interface IState {
      * Gets the name of the state.
      */
     val name: String
+
+    /**
+     * Gets a unique identifier of this object.
+     */
+    val id: String
 }
 
 /**

@@ -122,13 +122,15 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .entry {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .transition(Event2, state3)
                     .entry {
                         println(it)
@@ -149,14 +151,16 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .transition(Event2, state3)
                     .entry {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .transition(Event2, state3)
                     .entry {
                         println(it)
@@ -182,14 +186,16 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .transition(Event2, state4)
                     .entry {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .transition(Event2, state3)
                     .entry {
                         println(it)
@@ -216,7 +222,8 @@ class FsmSyncTest {
                     Thread.sleep(100)
                 },
                 state2
-                    .with<Int>().transition(Event1, state2)
+                    .with<Int>()
+                    .transition(Event1, state2)
                     .entry {
                         println(it)
                         Thread.sleep(100)

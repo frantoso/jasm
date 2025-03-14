@@ -276,9 +276,9 @@ abstract class StateContainerBase<TData, TState : IState>(
     }
 
     /**
-     * Gets a unique identifier of this object.
+     * Gets an identifier of this object. The id of the encapsulated state.
      */
-    val id = super.toString()
+    val id = state.id
 
     /**
      * Gets an object implementing the debug interface. This allows the access to special functions which are mainly

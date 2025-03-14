@@ -1,5 +1,6 @@
 package de.franklisting.fsm
 
+import de.franklisting.fsm.testutil.MultipleDiagramGenerator
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
@@ -129,9 +130,9 @@ class NestedFsmTest {
 
     @Test
     fun `generates a graph from the state machine`() {
-//        val generator = MultipleDiagramGenerator(TrafficLight().fsmMain)
-//
-//        generator.toSvg("build/reports/traffic-light.svg")
-//        generator.toPng("build/reports/traffic-light.png")
+        val generator = MultipleDiagramGenerator(TrafficLight().fsmMain)
+
+        generator.toSvg("build/reports/traffic-light.svg")
+        generator.toPng("build/reports/traffic-light.png")
     }
 }

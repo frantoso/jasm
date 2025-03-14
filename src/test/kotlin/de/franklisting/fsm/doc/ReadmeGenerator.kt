@@ -10,6 +10,7 @@ import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
 import de.franklisting.fsm.fsmAsyncOf
 import de.franklisting.fsm.fsmOf
+import de.franklisting.fsm.testutil.DiagramGenerator
 import de.franklisting.fsm.with
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,9 +42,9 @@ class ReadmeGenerator {
                 "simple traffic light",
                 // define initial state with transitions and other parameters...
                 showingRed
-                    .with<Int>()
-                    .entry { println("x--    $it") }
-                    .transition(Tick, showingRedYellow),
+                    .with<Int>() // associate the event data type with the state
+                    .entry { println("x--    $it") } // add an entry function
+                    .transition(Tick, showingRedYellow), // add one or more transitions
                 // define other states with transitions and other parameters...
                 showingRedYellow
                     .with<Int>()
@@ -71,7 +72,7 @@ class ReadmeGenerator {
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README
-//        DiagramGenerator(fsm).toSvg(fsmFileName)
+        DiagramGenerator(fsm).toSvg(fsmFileName)
     }
 
     @Test
@@ -118,6 +119,8 @@ class ReadmeGenerator {
                     """
                     - [Get it.](#gradle)
                     - [Implementing a simple Finite State Machine.](#how-to-create-a-simple-state-machine)
+                    - [The Classes.](#the-classes)
+                    - [Synchronous vs Asynchronous.](#synchronous-vs-asynchronous)
                     """.trimIndent()
 
                 subSection("Gradle")
@@ -165,7 +168,8 @@ class ReadmeGenerator {
                     """
                     A synchronous (blocking) state machine. The call to trigger is blocking. 
                     
-                    The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+                    A value of this type must be provided at the call of start() or trigger().
                     """.trimIndent()
                 example {
                     data class MyFsmData(
@@ -192,7 +196,8 @@ class ReadmeGenerator {
                     An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
                     queued and triggered sequentially.
                     
-                    The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+                    A value of this type must be provided at the call of start() or trigger().
                     """.trimIndent()
                 example {
                     data class MyFsmData(
