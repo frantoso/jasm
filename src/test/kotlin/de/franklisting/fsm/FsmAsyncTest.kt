@@ -14,23 +14,26 @@ class FsmAsyncTest {
 
     @Test
     fun `triggers events asynchronous`() {
-        val fsm = FsmAsync<Int>("myFsm")
+        val state1 = State("first")
+        val state2 = State("second")
 
-        val state1 = State<Int>("first")
-        val state2 = State<Int>("second")
-
-        fsm.initialTransition(state1)
-        state1.transition(Event1, state2).entry {
-            println(it)
-            Thread.sleep(100)
-        }
-        state2.transition(Event1, state2).entry {
-            println(it)
-            Thread.sleep(100)
-        }
-        state2.transition(Event2, fsm.final)
-        fsm.onStateChanged =
-            { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") }
+        val fsm =
+            fsmAsyncOf(
+                name = "myFsm",
+                { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
+                { _, _, _, _ -> },
+                state1.with<Int>().transition(Event1, state2).entry {
+                    println(it)
+                    Thread.sleep(100)
+                },
+                state2
+                    .with<Int>()
+                    .transition(Event1, state2)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    }.transition(Event2, FinalState()),
+            )
 
         fsm.start(1)
 

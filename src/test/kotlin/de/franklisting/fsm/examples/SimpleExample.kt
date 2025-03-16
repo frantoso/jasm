@@ -1,15 +1,20 @@
-package de.franklisting.fsm
+package de.franklisting.fsm.examples
 
+import de.franklisting.fsm.Event
+import de.franklisting.fsm.FsmSync
+import de.franklisting.fsm.State
+import de.franklisting.fsm.fsmOf
 import de.franklisting.fsm.testutil.DiagramGenerator
 import de.franklisting.fsm.testutil.TestData
 import de.franklisting.fsm.testutil.testStateChange
+import de.franklisting.fsm.with
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import kotlin.test.Test
 
-class SimpleFsmTest {
+class SimpleExample {
     object Tick : Event()
 
     object OtherEvent : Event()
@@ -17,27 +22,34 @@ class SimpleFsmTest {
     private val trafficLight = TrafficLight()
 
     class TrafficLight {
-        val fsm = FsmSync<Int>("simple traffic light")
-        val showingRed = State<Int>("ShowingRed")
-        val showingRedYellow = State<Int>("ShowingRedYellow")
-        val showingYellow = State<Int>("ShowingYellow")
-        val showingGreen = State<Int>("ShowingGreen")
+        val fsm: FsmSync<Int>
+        val showingRed = State("ShowingRed")
+        val showingRedYellow = State("ShowingRedYellow")
+        val showingYellow = State("ShowingYellow")
+        val showingGreen = State("ShowingGreen")
 
         init {
 
-            fsm.initialTransition(showingRed)
-            showingRed
-                .entry { println("x--    $it") }
-                .transition(Tick, showingRedYellow)
-            showingRedYellow
-                .entry { println("xx-    $it") }
-                .transition(Tick, showingGreen)
-            showingGreen
-                .entry { println("--x    $it") }
-                .transition(Tick, showingYellow)
-            showingYellow
-                .entry { println("-x-    $it") }
-                .transition(Tick, showingRed)
+            fsm =
+                fsmOf(
+                    "simple traffic light",
+                    showingRed
+                        .with<Int>()
+                        .entry { println("x--    $it") }
+                        .transition(Tick, showingRedYellow),
+                    showingRedYellow
+                        .with<Int>()
+                        .entry { println("xx-    $it") }
+                        .transition(Tick, showingGreen),
+                    showingGreen
+                        .with<Int>()
+                        .entry { println("--x    $it") }
+                        .transition(Tick, showingYellow),
+                    showingYellow
+                        .with<Int>()
+                        .entry { println("-x-    $it") }
+                        .transition(Tick, showingRed),
+                )
         }
     }
 
@@ -119,5 +131,42 @@ class SimpleFsmTest {
 
         generator.toSvg("build/reports/simple-traffic-light.svg")
         generator.toPng("build/reports/simple-traffic-light.png")
+    }
+
+    @Test
+    fun `new stuff`() {
+        val showingRed = State("ShowingRed")
+        val showingRedYellow = State("ShowingRedYellow")
+        val showingYellow = State("ShowingYellow")
+        val showingGreen = State("ShowingGreen")
+
+        val fsm2 =
+            fsmOf(
+                "simple traffic light",
+                showingRed
+                    .with<Int>()
+                    .entry { println("x--    $it") }
+                    .transition(Tick, showingRedYellow),
+                showingRedYellow
+                    .with<Int>()
+                    .entry { println("xx-    $it") }
+                    .transition(Tick, showingGreen),
+                showingGreen
+                    .with<Int>()
+                    .entry { println("--x    $it") }
+                    .transition(Tick, showingYellow),
+                showingYellow
+                    .with<Int>()
+                    .entry { println("-x-    $it") }
+                    .transition(Tick, showingRed),
+            )
+
+        fsm2.start(1)
+
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
+        fsm2.trigger(Tick, 2)
     }
 }

@@ -8,7 +8,7 @@ package de.franklisting.fsm
  * @param state The destination state of the transition.
  * @param history The type of history to use.
  */
-class TransitionEndPoint<T>(
-    val state: State<T>,
+open class TransitionEndPoint(
+    val state: EndState,
     val history: History = History.None,
 )

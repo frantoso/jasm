@@ -1,11 +1,13 @@
 package de.franklisting.fsm.testutil
 
+import de.franklisting.fsm.FinalState
 import de.franklisting.fsm.Fsm
+import de.franklisting.fsm.IState
+import de.franklisting.fsm.InitialState
 import de.franklisting.fsm.NoEvent
 import de.franklisting.fsm.StartEvent
-import de.franklisting.fsm.State
+import de.franklisting.fsm.StateContainerBase
 import de.franklisting.fsm.Transition
-import de.franklisting.fsm.testutil.DiagramGenerator.Companion.toFile
 import guru.nidi.graphviz.attribute.Color
 import guru.nidi.graphviz.attribute.Font
 import guru.nidi.graphviz.attribute.Label
@@ -27,61 +29,43 @@ import java.io.File
 // https://github.com/nidi3/graphviz-java
 class MultipleDiagramGenerator<T>(
     fsm: Fsm<T>,
-) {
-    private val mainFsmGenerator = DiagramGenerator(fsm)
-
+) : DiagramGenerator<T>(fsm) {
     private val childGenerators =
-        mainFsmGenerator.states
+        states
             .flatMap { it.debugInterface.childDump }
             .distinct()
             .map { DiagramGenerator(it) }
 
-    private fun generateGraph(): Graph {
-        val graphs =
-            (listOf(mainFsmGenerator.generateGraphWithLabel()) + childGenerators.map { it.generateGraphWithLabel() }).map { it.cluster() }
-
-        return graph().directed().with(graphs)
-    }
-
-    fun toSvg(
-        fileName: String,
-        width: Int = 1000,
-    ) {
-        toFile(generateGraph(), fileName, width, SVG)
-    }
-
-    fun toPng(
-        fileName: String,
-        width: Int = 1000,
-    ) {
-        toFile(generateGraph(), fileName, width, PNG)
-    }
+    override val fsmGraph: Graph =
+        (listOf(graphWithLabel) + childGenerators.map { it.graphWithLabel })
+            .map { it.cluster() }
+            .let { graph().directed().with(it) }
 }
 
-class DiagramGenerator<T>(
+open class DiagramGenerator<T>(
     internal val fsm: Fsm<T>,
 ) {
-    internal val states: List<State<T>> = findStates()
+    internal val states: List<StateContainerBase<T, out IState>> =
+        listOf(fsm.debugInterface.initialState) + fsm.debugInterface.stateDump
 
-    private fun findStates(): List<State<T>> {
-        val states = mutableSetOf(fsm.initial)
-        findStates(states, fsm.initial.debugInterface.transitionDump)
-        return states.toList()
-    }
+    private val stateNodes = states.map { it to it.node }
 
-    private fun findStates(
-        states: MutableSet<State<T>>,
-        t: List<Transition<T>>,
-    ) {
-        t.forEach {
-            if (states.add(it.endPoint.state)) {
-                findStates(states, it.endPoint.state.debugInterface.transitionDump)
-            }
+    private val links =
+        stateNodes.map { entry ->
+            entry.second.link(
+                entry.first.debugInterface.transitionDump
+                    .mapNotNull { transition ->
+                        stateNodes.firstOrNull { transition.endPoint.state == it.first.state }?.second?.use(
+                            transition,
+                        )
+                    },
+            )
         }
-    }
 
-    fun generateGraphWithLabel(): Graph =
-        generateGraph()
+    private val rawGraph = graph(fsm.name).directed().with(links)
+
+    internal val graphWithLabel =
+        rawGraph
             .graphAttr()
             .with(
                 Label.of(fsm.name).justify(Label.Justification.LEFT),
@@ -89,37 +73,20 @@ class DiagramGenerator<T>(
                 Font.size(10),
             )
 
-    private fun generateGraph(): Graph {
-        val stateNodes = states.associateWith { it.node }
-        val links =
-            stateNodes.map { entry ->
-                entry.value.link(
-                    entry.key.debugInterface.transitionDump
-                        .mapNotNull { stateNodes[it.endPoint.state]?.use(it) },
-                )
-            }
-
-        return graph(fsm.name)
-            .directed()
-            .with(links)
-    }
+    protected open val fsmGraph: Graph = rawGraph
 
     fun toSvg(
         fileName: String,
         width: Int = 500,
-    ) {
-        toFile(generateGraph(), fileName, width, SVG)
-    }
+    ) = toFile(fsmGraph, fileName, width, SVG)
 
     fun toPng(
         fileName: String,
         width: Int = 500,
-    ) {
-        toFile(generateGraph(), fileName, width, PNG)
-    }
+    ) = toFile(fsmGraph, fileName, width, PNG)
 
     companion object {
-        private val <T>State<T>.standardNode: Node
+        private val <T>StateContainerBase<T, out IState>.standardNode: Node
             get() =
                 node(id)
                     .with(
@@ -132,10 +99,10 @@ class DiagramGenerator<T>(
                         Label.of(name),
                     ).with(Font.name("Arial"))
 
-        private val <T>State<T>.parentNode: Node
+        private val <T>StateContainerBase<T, out IState>.parentNode: Node
             get() = standardNode.with("peripheries", "2")
 
-        private val <T>State<T>.initialNode: Node
+        private val <T>StateContainerBase<T, out IState>.initialNode: Node
             get() =
                 node(id)
                     .with(
@@ -145,7 +112,7 @@ class DiagramGenerator<T>(
                         Label.of(""),
                     ).with(Size.mode(Size.Mode.FIXED).size(0.3, 0.3))
 
-        private val <T>State<T>.finalNode: Node
+        private val <T>StateContainerBase<T, out IState>.finalNode: Node
             get() =
                 node(id)
                     .with(
@@ -155,11 +122,11 @@ class DiagramGenerator<T>(
                         Label.of(""),
                     ).with(Size.mode(Size.Mode.FIXED).size(0.3, 0.3))
 
-        val <T>State<T>.node: Node
+        val <T>StateContainerBase<T, out IState>.node: Node
             get() =
                 when {
-                    isInitial -> initialNode
-                    isFinal -> finalNode
+                    state is InitialState -> initialNode
+                    state is FinalState -> finalNode
                     hasChildren -> parentNode
                     else -> standardNode
                 }
@@ -176,16 +143,17 @@ class DiagramGenerator<T>(
                 .render(format)
                 .toFile(File(fileName))
         }
+
+        private val <T>Transition<T>.label
+            get() =
+                Label.of(
+                    when (trigger::class) {
+                        StartEvent::class, NoEvent::class -> ""
+                        else -> trigger.name
+                    },
+                )
+
+        private fun <T> Node.use(transition: Transition<T>): Link =
+            Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
     }
-
-    private val <T>Transition<T>.label
-        get() =
-            Label.of(
-                when (trigger::class) {
-                    StartEvent::class, NoEvent::class -> ""
-                    else -> trigger.name
-                },
-            )
-
-    private fun <T> Node.use(transition: Transition<T>): Link = Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
 }

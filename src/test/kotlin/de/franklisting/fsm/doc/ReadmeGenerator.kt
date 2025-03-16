@@ -6,9 +6,12 @@ import de.franklisting.fsm.Event
 import de.franklisting.fsm.Fsm
 import de.franklisting.fsm.FsmAsync
 import de.franklisting.fsm.FsmSync
-import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
+import de.franklisting.fsm.examples.SimpleExample.Tick
+import de.franklisting.fsm.fsmAsyncOf
+import de.franklisting.fsm.fsmOf
 import de.franklisting.fsm.testutil.DiagramGenerator
+import de.franklisting.fsm.with
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -26,28 +29,36 @@ class ReadmeGenerator {
     fun `test a simple state machine`() {
         // BEGIN_FSM_CODE_SNIPPET
         // create the state machine
-        val fsm = FsmSync<Int>("simple traffic light")
 
         // create the states...
-        val showingRed = State<Int>("ShowingRed")
-        val showingRedYellow = State<Int>("ShowingRedYellow")
-        val showingYellow = State<Int>("ShowingYellow")
-        val showingGreen = State<Int>("ShowingGreen")
+        val showingRed = State("ShowingRed")
+        val showingRedYellow = State("ShowingRedYellow")
+        val showingYellow = State("ShowingYellow")
+        val showingGreen = State("ShowingGreen")
 
-        // define the transitions...
-        fsm.initialTransition(showingRed)
-        showingRed
-            .entry { println("x--    $it") }
-            .transition(Tick, showingRedYellow)
-        showingRedYellow
-            .entry { println("xx-    $it") }
-            .transition(Tick, showingGreen)
-        showingGreen
-            .entry { println("--x    $it") }
-            .transition(Tick, showingYellow)
-        showingYellow
-            .entry { println("-x-    $it") }
-            .transition(Tick, showingRed)
+        // create the state machine...
+        val fsm =
+            fsmOf(
+                "simple traffic light",
+                // define initial state with transitions and other parameters...
+                showingRed
+                    .with<Int>() // associate the event data type with the state
+                    .entry { println("x--    $it") } // add an entry function
+                    .transition(Tick, showingRedYellow), // add one or more transitions
+                // define other states with transitions and other parameters...
+                showingRedYellow
+                    .with<Int>()
+                    .entry { println("xx-    $it") }
+                    .transition(Tick, showingGreen),
+                showingGreen
+                    .with<Int>()
+                    .entry { println("--x    $it") }
+                    .transition(Tick, showingYellow),
+                showingYellow
+                    .with<Int>()
+                    .entry { println("-x-    $it") }
+                    .transition(Tick, showingRed),
+            )
 
         // start the state machine
         fsm.start(1)
@@ -57,7 +68,7 @@ class ReadmeGenerator {
         // trigger an event
         fsm.trigger(Tick, 1)
 
-        assertThat(fsm.currentState).isEqualTo(showingRedYellow)
+        assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README
@@ -108,6 +119,8 @@ class ReadmeGenerator {
                     """
                     - [Get it.](#gradle)
                     - [Implementing a simple Finite State Machine.](#how-to-create-a-simple-state-machine)
+                    - [The Classes.](#the-classes)
+                    - [Synchronous vs Asynchronous.](#synchronous-vs-asynchronous)
                     """.trimIndent()
 
                 subSection("Gradle")
@@ -155,7 +168,8 @@ class ReadmeGenerator {
                     """
                     A synchronous (blocking) state machine. The call to trigger is blocking. 
                     
-                    The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+                    A value of this type must be provided at the call of start() or trigger().
                     """.trimIndent()
                 example {
                     data class MyFsmData(
@@ -163,9 +177,15 @@ class ReadmeGenerator {
                         val y: String,
                     )
 
-                    val fsm = FsmSync<MyFsmData>("MyFsm")
-
-                    // add states and transitions
+                    val state = State("MyState")
+                    val fsm =
+                        fsmOf(
+                            "MyFsm",
+                            // add at minimum one state
+                            state
+                                .with<MyFsmData>()
+                                .transitionToFinal(Tick),
+                        )
 
                     fsm.start(MyFsmData(42, "test"))
                 }
@@ -176,7 +196,8 @@ class ReadmeGenerator {
                     An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
                     queued and triggered sequentially.
                     
-                    The type parameter defines the type of data to send to the machine when it is triggered or started.
+                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
+                    A value of this type must be provided at the call of start() or trigger().
                     """.trimIndent()
                 example {
                     data class MyFsmData(
@@ -184,9 +205,15 @@ class ReadmeGenerator {
                         val y: String,
                     )
 
-                    val fsm = FsmAsync<MyFsmData>("MyFsm")
-
-                    // add states and transitions
+                    val state = State("MyState")
+                    val fsm =
+                        fsmAsyncOf(
+                            "MyFsm",
+                            // add at minimum one state
+                            state
+                                .with<MyFsmData>()
+                                .transitionToFinal(Tick),
+                        )
 
                     fsm.start(MyFsmData(1, "2"))
                 }
@@ -205,29 +232,52 @@ class ReadmeGenerator {
                      different.
                     """.trimIndent()
                 example {
+                    val output = mutableListOf<String>()
                     val event1 = object : Event() {}
                     val event2 = object : Event() {}
+                    val state1 = State("first")
+                    val state2 = State("second")
+
+                    fun createFsmSync(): FsmSync<Int> =
+                        fsmOf(
+                            "MySyncFsm",
+                            state1
+                                .with<Int>()
+                                .transition(event1, state2)
+                                .entry {
+                                    output.addLast("- $it")
+                                    Thread.sleep(100)
+                                },
+                            state2
+                                .with<Int>()
+                                .transition(event1, state2)
+                                .entry {
+                                    output.addLast("- $it")
+                                    Thread.sleep(100)
+                                }.transitionToFinal(event2),
+                        )
+
+                    fun createFsmAsync(): FsmAsync<Int> =
+                        fsmAsyncOf(
+                            "MyAsyncFsm",
+                            state1
+                                .with<Int>()
+                                .transition(event1, state2)
+                                .entry {
+                                    output.addLast("- $it")
+                                    Thread.sleep(100)
+                                },
+                            state2
+                                .with<Int>()
+                                .transition(event1, state2)
+                                .entry {
+                                    output.addLast("- $it")
+                                    Thread.sleep(100)
+                                }.transitionToFinal(event2),
+                        )
 
                     fun runFsm(fsm: Fsm<Int>): List<String> {
-                        val output = mutableListOf<String>()
-
-                        val state1 = State<Int>("first")
-                        val state2 = State<Int>("second")
-
-                        fsm.initialTransition(state1)
-                        state1
-                            .transition(event1, state2)
-                            .entry {
-                                output.addLast("- $it")
-                                Thread.sleep(100)
-                            }
-                        state2
-                            .transition(event1, state2)
-                            .entry {
-                                output.addLast("- $it")
-                                Thread.sleep(100)
-                            }.transition(event2, fsm.final)
-
+                        output.clear()
                         fsm.start(1)
 
                         runBlocking {
@@ -260,13 +310,13 @@ class ReadmeGenerator {
                             println(it)
                         }
 
-                        return output
+                        return output.toList()
                     }
 
-                    val outputAsync = runFsm(FsmAsync("myFsm"))
+                    val outputAsync = runFsm(createFsmAsync())
                     assertThat(outputAsync.takeLast(10).filter { it.startsWith("+") }).hasSize(0)
 
-                    val outputSync = runFsm(FsmSync("myFsm"))
+                    val outputSync = runFsm(createFsmSync())
                     assertThat(outputSync.takeLast(5).filter { it.startsWith("+") }.size)
                         .isGreaterThanOrEqualTo(2)
                 }
