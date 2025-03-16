@@ -290,7 +290,7 @@ class HistoryExample {
     fun `generates a graph from the state machine`() {
         val generator = MultipleDiagramGenerator(Main().machine)
 
-        generator.toSvg("build/reports/history.svg")
-        generator.toPng("build/reports/history.png")
+        generator.toSvg("build/reports/history.svg", 1000)
+        generator.toPng("build/reports/history.png", 1000)
     }
 }

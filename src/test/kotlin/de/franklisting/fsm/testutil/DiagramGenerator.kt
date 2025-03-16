@@ -29,15 +29,18 @@ import java.io.File
 // https://github.com/nidi3/graphviz-java
 class MultipleDiagramGenerator<T>(
     fsm: Fsm<T>,
+    private val level: Int = 0,
 ) : DiagramGenerator<T>(fsm) {
     private val childGenerators =
         states
             .flatMap { it.debugInterface.childDump }
             .distinct()
-            .map { DiagramGenerator(it) }
+            .map { MultipleDiagramGenerator(it, level + 1) }
+
+    private val graphs: List<Graph> = listOf(graphWithLabel) + childGenerators.flatMap { it.graphs }
 
     override val fsmGraph: Graph =
-        (listOf(graphWithLabel) + childGenerators.map { it.graphWithLabel })
+        graphs
             .map { it.cluster() }
             .let { graph().directed().with(it) }
 }
