@@ -1,10 +1,17 @@
-package de.franklisting.fsm
+package de.franklisting.fsm.examples
 
+import de.franklisting.fsm.Event
+import de.franklisting.fsm.FinalState
+import de.franklisting.fsm.FsmSync
+import de.franklisting.fsm.NoEvent
+import de.franklisting.fsm.State
+import de.franklisting.fsm.fsmOf
 import de.franklisting.fsm.testutil.MultipleDiagramGenerator
+import de.franklisting.fsm.with
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
-class NestedFsmTest {
+class NestedExample {
     object Tick : Event()
 
     data class Parameters(

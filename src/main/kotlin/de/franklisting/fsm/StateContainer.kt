@@ -56,7 +56,6 @@ abstract class StateContainerBase<TData, TState : IState>(
         data: TData,
         history: History,
     ) {
-        println("$history - ${history.isHistory}")
         if (history.isHistory) {
             if (tryStartHistory(data)) {
                 return

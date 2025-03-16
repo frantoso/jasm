@@ -6,6 +6,9 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertThrows
+import java.io.InvalidClassException
+import java.io.InvalidObjectException
 import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 
@@ -37,6 +40,33 @@ class FsmSyncTest {
                 stateContainer1,
                 listOf(stateContainer2),
             )
+    }
+
+    private fun createSyncFsm(
+        onStateChanged: (sender: Fsm<Int>, from: IState, to: IState) -> Unit,
+        onTriggered: (sender: Fsm<Int>, currentState: IState, event: Event, handled: Boolean) -> Unit,
+    ): FsmSync<Int> {
+        val state1 = State("first")
+        val state2 = State("second")
+
+        val fsm =
+            fsmOf(
+                "myFsm",
+                onStateChanged,
+                onTriggered,
+                state1.with<Int>().transition(Event1, state2).entry {
+                    println(it)
+                    Thread.sleep(100)
+                },
+                state2
+                    .with<Int>()
+                    .transition(Event1, state2)
+                    .entry {
+                        println(it)
+                        Thread.sleep(100)
+                    }.transition(Event2, FinalState()),
+            )
+        return fsm
     }
 
     @Test
@@ -209,25 +239,10 @@ class FsmSyncTest {
 
     @Test
     fun `triggers events synchronously`() {
-        val state1 = State("first")
-        val state2 = State("second")
-
         val fsm =
-            fsmOf(
-                "myFsm",
+            createSyncFsm(
                 { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
                 { machine, state, event, handled -> println("$machine - $state - $event - $handled") },
-                state1.with<Int>().transition(Event1, state2).entry {
-                    println(it)
-                    Thread.sleep(100)
-                },
-                state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .entry {
-                        println(it)
-                        Thread.sleep(100)
-                    }.transition(Event2, FinalState()),
             )
 
         fsm.start(1)
@@ -276,5 +291,45 @@ class FsmSyncTest {
         }
 
         println("test over")
+    }
+
+    @Test
+    fun `calling invalid state handler throws FsmException`() {
+        val fsm = createSyncFsm({ _, _, _ -> throw InvalidClassException("Test") }, { _, _, _, _ -> })
+
+        assertThrows<FsmException> { fsm.start(1) }
+    }
+
+    @Test
+    fun `calling invalid trigger handler throws FsmException`() {
+        val fsm = createSyncFsm({ _, _, _ -> }, { _, _, _, _ -> throw InvalidObjectException("Test") })
+
+        assertThrows<FsmException> { fsm.start(1) }
+    }
+
+    @Test
+    fun `a call of resume starts the FSM with the specified state`() {
+        val state1 = State("first")
+        val state2 = State("second")
+        val state3 = State("third")
+
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1
+                    .with<Int>()
+                    .transition(Event1, state2),
+                state2
+                    .with<Int>()
+                    .transition(Event1, state2)
+                    .transition(Event2, state3),
+                state3
+                    .with<Int>()
+                    .transition(Event1, state1),
+            )
+
+        fsm.debugInterface.resume(state2, 3)
+
+        assertThat(fsm.currentState.state).isEqualTo(state2)
     }
 }

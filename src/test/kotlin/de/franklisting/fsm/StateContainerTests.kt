@@ -4,6 +4,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.Test
 
 class StateContainerTests {
@@ -351,6 +352,15 @@ class StateContainerTests {
                 childContainer["processTransitions"](StopEvent, 23)
             }
         }
+    }
+
+    @Test
+    fun `default setting of actions does not throw any exception`() {
+        val container = State("Otto").with<Int>()
+
+        assertDoesNotThrow { container.fireOnEntry(1) }
+        assertDoesNotThrow { container.fireDoInState(2) }
+        assertDoesNotThrow { container.fireOnExit(3) }
     }
 
     companion object {

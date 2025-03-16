@@ -6,8 +6,8 @@ import de.franklisting.fsm.Event
 import de.franklisting.fsm.Fsm
 import de.franklisting.fsm.FsmAsync
 import de.franklisting.fsm.FsmSync
-import de.franklisting.fsm.SimpleFsmTest.Tick
 import de.franklisting.fsm.State
+import de.franklisting.fsm.examples.SimpleExample.Tick
 import de.franklisting.fsm.fsmAsyncOf
 import de.franklisting.fsm.fsmOf
 import de.franklisting.fsm.testutil.DiagramGenerator

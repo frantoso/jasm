@@ -167,11 +167,7 @@ abstract class Fsm<T>(
 
         val oldState = currentState
 
-        try {
-            currentState = changeStateData.endPoint.state.container
-        } catch (ex: Throwable) {
-            println(ex.toString())
-        }
+        currentState = changeStateData.endPoint.state.container
 
         raiseStateChanged(oldState, currentState)
 

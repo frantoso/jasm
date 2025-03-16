@@ -1,15 +1,20 @@
-package de.franklisting.fsm
+package de.franklisting.fsm.examples
 
+import de.franklisting.fsm.Event
+import de.franklisting.fsm.FsmSync
+import de.franklisting.fsm.State
+import de.franklisting.fsm.fsmOf
 import de.franklisting.fsm.testutil.DiagramGenerator
 import de.franklisting.fsm.testutil.TestData
 import de.franklisting.fsm.testutil.testStateChange
+import de.franklisting.fsm.with
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import kotlin.test.Test
 
-class SimpleFsmTest {
+class SimpleExample {
     object Tick : Event()
 
     object OtherEvent : Event()
