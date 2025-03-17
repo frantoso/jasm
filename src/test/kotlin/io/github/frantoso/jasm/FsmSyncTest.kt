@@ -87,6 +87,21 @@ class FsmSyncTest {
     }
 
     @Test
+    fun `creates a new state machine with onTrigger`() {
+        val fsm =
+            fsmOf(
+                "myFsm",
+                { _, _, _ -> },
+                state1.with<Int>(),
+            )
+        assertThat(fsm.isRunning).isFalse
+        assertThat(fsm.hasFinished).isFalse
+        assertThat(fsm.currentState.state is InitialState).isTrue
+        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.name).isEqualTo("myFsm")
+    }
+
+    @Test
     fun `starts the state machine`() {
         assertThat(fsm.isRunning).isFalse
 

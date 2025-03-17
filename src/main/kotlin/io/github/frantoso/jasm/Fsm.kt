@@ -437,6 +437,21 @@ fun <T> fsmOf(
 ): FsmSync<T> = FsmSync(name, onStateChanged, onTriggered, startState, otherStates.toList())
 
 /**
+ * Creates a synchronous FSM from the provided data.
+ * @param name The name of the FSM.
+ * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
+ * handler of the state is called.  It should be used mainly for informational purpose.
+ * @param startState The start state (first state) of the FSM.
+ * @param otherStates The other states of the FSM.
+ */
+fun <T> fsmOf(
+    name: String,
+    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
+    startState: StateContainerBase<T, out EndState>,
+    vararg otherStates: StateContainerBase<T, out IState>,
+): FsmSync<T> = FsmSync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
+
+/**
  * Creates an asynchronous FSM from the provided data.
  * @param name The name of the FSM.
  * @param startState The start state (first state) of the FSM.
@@ -465,3 +480,18 @@ fun <T> fsmAsyncOf(
     startState: StateContainerBase<T, out EndState>,
     vararg otherStates: StateContainerBase<T, out IState>,
 ): FsmAsync<T> = FsmAsync(name, onStateChanged, onTriggered, startState, otherStates.toList())
+
+/**
+ * Creates an asynchronous FSM from the provided data.
+ * @param name The name of the FSM.
+ * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
+ * handler of the state is called.  It should be used mainly for informational purpose.
+ * @param startState The start state (first state) of the FSM.
+ * @param otherStates The other states of the FSM.
+ */
+fun <T> fsmAsyncOf(
+    name: String,
+    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
+    startState: StateContainerBase<T, out EndState>,
+    vararg otherStates: StateContainerBase<T, out IState>,
+): FsmAsync<T> = FsmAsync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())

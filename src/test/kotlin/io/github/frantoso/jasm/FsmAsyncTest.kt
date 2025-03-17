@@ -13,6 +13,22 @@ class FsmAsyncTest {
     private object Event2 : Event()
 
     @Test
+    fun `creates a new state machine with onTrigger`() {
+        val state1 = State("first")
+        val fsm =
+            fsmAsyncOf(
+                "myFsm",
+                { _, _, _ -> },
+                state1.with<Int>(),
+            )
+        assertThat(fsm.isRunning).isFalse
+        assertThat(fsm.hasFinished).isFalse
+        assertThat(fsm.currentState.state is InitialState).isTrue
+        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.name).isEqualTo("myFsm")
+    }
+
+    @Test
     fun `triggers events asynchronous`() {
         val state1 = State("first")
         val state2 = State("second")
