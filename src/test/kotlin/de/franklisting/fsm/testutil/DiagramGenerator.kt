@@ -89,7 +89,7 @@ open class DiagramGenerator<T>(
     ) = toFile(fsmGraph, fileName, width, PNG)
 
     companion object {
-        private val <T>StateContainerBase<T, out IState>.standardNode: Node
+        private val <T>StateContainerBase<T, out IState>.standardNodeBase: Node
             get() =
                 node(id)
                     .with(
@@ -99,11 +99,13 @@ open class DiagramGenerator<T>(
                         Shape.BOX,
                         Color.BLACK,
                         Color.LIGHTSKYBLUE.fill(),
-                        Label.of(name),
                     ).with(Font.name("Arial"))
 
+        private val <T>StateContainerBase<T, out IState>.standardNode: Node
+            get() = standardNodeBase.with(Label.of(name))
+
         private val <T>StateContainerBase<T, out IState>.parentNode: Node
-            get() = standardNode.with("peripheries", "2")
+            get() = standardNode.with(Label.html(name.nestedLabel))
 
         private val <T>StateContainerBase<T, out IState>.initialNode: Node
             get() =
@@ -155,6 +157,86 @@ open class DiagramGenerator<T>(
                         else -> trigger.name
                     },
                 )
+
+        private val String.nestedLabel
+            get() =
+                """
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                  <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
+                  <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                </TABLE>
+                """.trimIndent()
+
+        private val String.historyLabel
+            get() =
+                """
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+                  <TR>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                        <TR><TD PORT="hist" ALIGN="LEFT"><FONT POINT-SIZE="8">H</FONT></TD></TR>
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                    <TD> </TD>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                  </TR>
+                </TABLE>
+                """.trimIndent()
+
+        private val String.deepHistoryLabel
+            get() =
+                """
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+                  <TR>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                        <TR><TD PORT="deep" ALIGN="LEFT"><FONT POINT-SIZE="8">H*</FONT></TD></TR>
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                    <TD> </TD>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                  </TR>
+                </TABLE>
+                """.trimIndent()
+
+        private val String.historyAndDeepHistoryLabel
+            get() =
+                """
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+                  <TR>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                        <TR><TD PORT="hist" ALIGN="LEFT"><FONT POINT-SIZE="8">H</FONT></TD></TR>
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                        <TR><TD PORT="deep" ALIGN="LEFT"><FONT POINT-SIZE="8">H*</FONT></TD></TR>
+                        <TR><TD><FONT POINT-SIZE="2"> </FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                    <TD> </TD>
+                    <TD>
+                      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
+                        <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                      </TABLE>
+                    </TD>
+                  </TR>
+                </TABLE>
+                """.trimIndent()
 
         private fun <T> Node.use(transition: Transition<T>): Link =
             Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
