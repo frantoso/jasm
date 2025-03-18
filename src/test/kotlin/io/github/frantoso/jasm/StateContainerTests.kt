@@ -52,6 +52,30 @@ class StateContainerTests {
 
             assertThat(container.hasTransitions).isFalse
             assertThat(container.hasChildren).isTrue
+            assertThat(container.debugInterface.childDump).hasSize(1)
+        }
+
+        @Test
+        fun `adds a list of children`() {
+            val fsm1 =
+                fsmOf(
+                    FSM_NAME,
+                    State("Start")
+                        .with<Int>(),
+                )
+            val fsm2 =
+                fsmOf(
+                    "Otto",
+                    State("Start")
+                        .with<Int>(),
+                )
+            val container =
+                emptyContainer(State(TEST_STATE_1_NAME))
+                    .children(listOf(fsm1, fsm2))
+
+            assertThat(container.hasTransitions).isFalse
+            assertThat(container.hasChildren).isTrue
+            assertThat(container.debugInterface.childDump).hasSize(2)
         }
 
         @Test
