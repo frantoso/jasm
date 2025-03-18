@@ -101,6 +101,23 @@ class StateContainerTests {
         }
 
         @Test
+        fun `adds a transition without event to a nested state`() {
+            val fsm = fsmOf("fsm", State("Start").with<Int>())
+            val container =
+                emptyContainer(State(TEST_STATE_1_NAME))
+                    .child(fsm)
+                    .transition(State(TEST_STATE_2_NAME).history)
+
+            assertThat(container.hasTransitions).isTrue
+            assertThat(container.hasChildren).isTrue
+            assertThat(
+                container.debugInterface.transitionDump
+                    .first()
+                    .trigger,
+            ).isEqualTo(NoEvent)
+        }
+
+        @Test
         fun `adds a transition to final state`() {
             val container = emptyContainer(State(TEST_STATE_1_NAME)).transitionToFinal(TestEvent)
 

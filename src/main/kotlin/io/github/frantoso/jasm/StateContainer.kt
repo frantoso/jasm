@@ -202,7 +202,7 @@ abstract class StateContainerBase<TData, TState : IState>(
     private fun triggerChildren(
         trigger: Event,
         data: TData,
-    ): Boolean = activeChildren.toList().any { triggerChild(it, trigger, data) }
+    ): Boolean = activeChildren.toList().map { triggerChild(it, trigger, data) }.any { it }
 
     /**
      * Triggers the specified child machine.

@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.assertThrows
 import java.io.InvalidClassException
 import java.io.InvalidObjectException
@@ -369,5 +370,120 @@ class FsmSyncTest {
         fsm.debugInterface.resume(state2, 3)
 
         assertThat(fsm.currentState.state).isEqualTo(state2)
+    }
+
+    @Nested
+    inner class NestedFsmTests {
+        private val tickEvent = object : Event("Tick") {}
+
+        private val state1Child1 = State("state1Child1")
+        private val state2Child1 = State("state2Child1")
+
+        private val state1Child2 = State("state1Child2")
+        private val state2Child2 = State("state2Child2")
+        private val state3Child2 = State("state3Child2")
+        private val state4Child2 = State("state4Child2")
+
+        private val state1Main = State("state1Main")
+        private val state2Main = State("state2Main")
+        private val state3Main = State("state3Main")
+
+        private val childMachine1 =
+            fsmOf(
+                "child1",
+                state1Child1
+                    .with<Int>()
+                    .transition(tickEvent, state2Child1),
+                state2Child1
+                    .with<Int>()
+                    .transitionToFinal(tickEvent),
+            )
+
+        private val childMachine2 =
+            fsmOf(
+                "child2",
+                state1Child2
+                    .with<Int>()
+                    .transition(tickEvent, state2Child2),
+                state2Child2
+                    .with<Int>()
+                    .transition(tickEvent, state3Child2),
+                state3Child2
+                    .with<Int>()
+                    .transition(tickEvent, state4Child2),
+                state4Child2
+                    .with<Int>()
+                    .transitionToFinal(tickEvent),
+            )
+
+        private val mainMachine =
+            fsmOf(
+                "main",
+                state1Main
+                    .with<Int>()
+                    .transition(tickEvent, state2Main),
+                state2Main
+                    .with<Int>()
+                    .children(listOf(childMachine1, childMachine2))
+                    .transition(state3Main),
+                state3Main
+                    .with<Int>()
+                    .transition(tickEvent, state1Main),
+            )
+
+        @Test
+        fun `test use of children`() {
+            mainMachine.start(1)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.isRunning).isFalse
+
+            mainMachine.trigger(tickEvent, 2)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(childMachine1.isRunning).isTrue
+            assertThat(childMachine2.isRunning).isTrue
+            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+
+            mainMachine.trigger(tickEvent, 3)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(childMachine1.currentState.state).isEqualTo(state2Child1)
+            assertThat(childMachine2.currentState.state).isEqualTo(state2Child2)
+
+            mainMachine.trigger(tickEvent, 4)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.currentState.state).isEqualTo(state3Child2)
+
+            mainMachine.trigger(tickEvent, 5)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.currentState.state).isEqualTo(state4Child2)
+
+            mainMachine.trigger(tickEvent, 6)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state3Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.isRunning).isFalse
+
+            mainMachine.trigger(tickEvent, 7)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.isRunning).isFalse
+
+            mainMachine.trigger(tickEvent, 8)
+
+            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(childMachine1.isRunning).isTrue
+            assertThat(childMachine2.isRunning).isTrue
+            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+        }
     }
 }
