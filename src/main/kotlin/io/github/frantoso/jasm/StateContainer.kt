@@ -202,7 +202,7 @@ abstract class StateContainerBase<TData, TState : IState>(
     private fun triggerChildren(
         trigger: Event,
         data: TData,
-    ): Boolean = activeChildren.toList().any { triggerChild(it, trigger, data) }
+    ): Boolean = activeChildren.toList().map { triggerChild(it, trigger, data) }.any { it }
 
     /**
      * Triggers the specified child machine.
@@ -306,13 +306,28 @@ class StateContainer<TData>(
 ) : StateContainerBase<TData, State>(state, children, transitions, onEntry, onExit, onDoInState) {
     /**
      * Adds a new child machine.
-     * @param fsm The child to add.
+     * @param stateMachine The child machine to add.
      * @return Returns a new state container.
      */
-    fun child(fsm: FsmSync<TData>): StateContainer<TData> =
+    fun child(stateMachine: FsmSync<TData>): StateContainer<TData> =
         StateContainer(
             state = state,
-            children = children + listOf(fsm),
+            children = children + listOf(stateMachine),
+            transitions = transitions,
+            onEntry = onEntry,
+            onExit = onExit,
+            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds new child machines.
+     * @param stateMachines The children to add.
+     * @return Returns a new state container.
+     */
+    fun children(stateMachines: List<FsmSync<TData>>): StateContainer<TData> =
+        StateContainer(
+            state = state,
+            children = children + stateMachines,
             transitions = transitions,
             onEntry = onEntry,
             onExit = onExit,
