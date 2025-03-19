@@ -34,16 +34,21 @@ abstract class Fsm<T>(
     private val initial: InitialStateContainer<T> = InitialState().with<T>().transition(startState.state)
 
     /**
+     * The start state in a list for later use.
+     */
+    private val startStateAsList = listOf(startState)
+
+    /**
      * A list of all states excluding the initial state.
      */
     private val states: List<StateContainerBase<T, out IState>> =
-        listOf(startState) + otherStates + destinationOnlyStates(startState, otherStates) + finalStateOrNot(otherStates)
+        startStateAsList + otherStates + destinationOnlyStates(startState, otherStates) + finalStateOrNot(otherStates)
 
     /**
      * Gets the final state (as list) or an empty list if there is no final state used in the transitions.
      */
     private fun finalStateOrNot(otherStates: List<StateContainerBase<T, out IState>>): List<StateContainerBase<T, out IState>> =
-        if (otherStates.flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
+        if ((otherStates + startStateAsList).flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
             emptyList()
         } else {
             listOf(FinalState().with())

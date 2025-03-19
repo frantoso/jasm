@@ -18,13 +18,45 @@ import guru.nidi.graphviz.model.Link
 import guru.nidi.graphviz.model.Node
 import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.Fsm
+import io.github.frantoso.jasm.History
 import io.github.frantoso.jasm.IState
 import io.github.frantoso.jasm.InitialState
 import io.github.frantoso.jasm.NoEvent
 import io.github.frantoso.jasm.StartEvent
 import io.github.frantoso.jasm.StateContainerBase
 import io.github.frantoso.jasm.Transition
+import io.github.frantoso.jasm.TransitionEndPoint
 import java.io.File
+
+fun <T> List<StateContainerBase<T, out IState>>.complete(infos: List<StateInfo>): List<StateContainerInfo<T>> {
+    val stateContainerInfoMap = this.associate { it.state to StateContainerInfo(it) }.toMutableMap()
+    infos.forEach {
+        val info = stateContainerInfoMap[it.state]!!
+        stateContainerInfoMap[it.state] = info.add(it)
+    }
+    return stateContainerInfoMap.values.toList()
+}
+
+class StateInfo(
+    endPoint: TransitionEndPoint,
+) {
+    val state: IState = endPoint.state
+    val hasHistory = endPoint.history.isHistory
+    val hasDeepHistory = endPoint.history.isDeepHistory
+}
+
+class StateContainerInfo<T>(
+    val container: StateContainerBase<T, out IState>,
+    val hasHistory: Boolean = false,
+    val hasDeepHistory: Boolean = false,
+) {
+    fun add(stateInfo: StateInfo): StateContainerInfo<T> =
+        StateContainerInfo(
+            container,
+            hasHistory || stateInfo.hasHistory,
+            hasDeepHistory || stateInfo.hasDeepHistory,
+        )
+}
 
 // https://github.com/nidi3/graphviz-java
 class MultipleDiagramGenerator<T>(
@@ -32,7 +64,7 @@ class MultipleDiagramGenerator<T>(
     private val level: Int = 0,
 ) : DiagramGenerator<T>(fsm) {
     private val childGenerators =
-        states
+        stateContainers
             .flatMap { it.debugInterface.childDump }
             .distinct()
             .map { MultipleDiagramGenerator(it, level + 1) }
@@ -48,24 +80,28 @@ class MultipleDiagramGenerator<T>(
 open class DiagramGenerator<T>(
     fsm: Fsm<T>,
 ) {
-    internal val states: List<StateContainerBase<T, out IState>> =
+    internal val stateContainers: List<StateContainerBase<T, out IState>> =
         listOf(fsm.debugInterface.initialState) + fsm.debugInterface.stateDump
 
-    private val stateNodes = states.map { it to it.node }
+    private val transitions = stateContainers.flatMap { it.transitions }
 
-    private val links =
+    private val stateContainerInfos = stateContainers.complete(transitions.map { StateInfo(it.endPoint) })
+
+    private val stateNodes = stateContainerInfos.map { it to it.node }
+
+    private val linksX =
         stateNodes.map { entry ->
             entry.second.link(
-                entry.first.debugInterface.transitionDump
+                entry.first.container.debugInterface.transitionDump
                     .mapNotNull { transition ->
-                        stateNodes.firstOrNull { transition.endPoint.state == it.first.state }?.second?.use(
+                        stateNodes.firstOrNull { transition.endPoint.state == it.first.container.state }?.second?.use(
                             transition,
                         )
                     },
             )
         }
 
-    private val rawGraph = graph(fsm.name).directed().with(links)
+    private val rawGraph = graph(fsm.name).directed().with(linksX)
 
     internal val graphWithLabel =
         rawGraph
@@ -107,6 +143,15 @@ open class DiagramGenerator<T>(
         private val <T>StateContainerBase<T, out IState>.parentNode: Node
             get() = standardNode.with(Label.html(name.nestedLabel))
 
+        private fun <T> StateContainerBase<T, out IState>.historyNode(isNested: Boolean): Node =
+            standardNode.with(Label.html(name.historyLabel(isNested)))
+
+        private fun <T> StateContainerBase<T, out IState>.deepHistoryNode(isNested: Boolean): Node =
+            standardNode.with(Label.html(name.deepHistoryLabel(isNested)))
+
+        private fun <T> StateContainerBase<T, out IState>.historyDeepHistoryNode(isNested: Boolean): Node =
+            standardNode.with(Label.html(name.historyAndDeepHistoryLabel(isNested)))
+
         private val <T>StateContainerBase<T, out IState>.initialNode: Node
             get() =
                 node(id)
@@ -127,13 +172,16 @@ open class DiagramGenerator<T>(
                         Label.of(""),
                     ).with(Size.mode(Size.Mode.FIXED).size(0.3, 0.3))
 
-        val <T>StateContainerBase<T, out IState>.node: Node
+        val <T>StateContainerInfo<T>.node: Node
             get() =
                 when {
-                    state is InitialState -> initialNode
-                    state is FinalState -> finalNode
-                    hasChildren -> parentNode
-                    else -> standardNode
+                    container.state is InitialState -> container.initialNode
+                    container.state is FinalState -> container.finalNode
+                    hasHistory && hasDeepHistory -> container.historyDeepHistoryNode(container.hasChildren)
+                    hasHistory && !hasDeepHistory -> container.historyNode(container.hasChildren)
+                    !hasHistory && hasDeepHistory -> container.deepHistoryNode(container.hasChildren)
+                    container.hasChildren -> container.parentNode
+                    else -> container.standardNode
                 }
 
         fun toFile(
@@ -167,9 +215,9 @@ open class DiagramGenerator<T>(
                 </TABLE>
                 """.trimIndent()
 
-        private val String.historyLabel
-            get() =
-                """
+        private fun String.historyLabel(isNested: Boolean): String {
+            val nested = if (isNested) "o-o" else ""
+            return """
                 <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
                   <TR>
                     <TD>
@@ -183,16 +231,17 @@ open class DiagramGenerator<T>(
                     <TD>
                       <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
                         <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
-                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">$nested</FONT></TD></TR>
                       </TABLE>
                     </TD>
                   </TR>
                 </TABLE>
                 """.trimIndent()
+        }
 
-        private val String.deepHistoryLabel
-            get() =
-                """
+        private fun String.deepHistoryLabel(isNested: Boolean): String {
+            val nested = if (isNested) "o-o" else ""
+            return """
                 <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
                   <TR>
                     <TD>
@@ -206,16 +255,17 @@ open class DiagramGenerator<T>(
                     <TD>
                       <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
                         <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
-                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">$nested</FONT></TD></TR>
                       </TABLE>
                     </TD>
-                  </TR>
-                </TABLE>
+                          </TR>
+                        </TABLE>
                 """.trimIndent()
+        }
 
-        private val String.historyAndDeepHistoryLabel
-            get() =
-                """
+        private fun String.historyAndDeepHistoryLabel(isNested: Boolean): String {
+            val nested = if (isNested) "o-o" else ""
+            return """
                 <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
                   <TR>
                     <TD>
@@ -231,14 +281,20 @@ open class DiagramGenerator<T>(
                     <TD>
                       <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" style="font-size:2">
                         <TR><TD VALIGN="BOTTOM"><FONT>$this</FONT></TD></TR>
-                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">o-o</FONT></TD></TR>
+                        <TR><TD ALIGN="RIGHT"><FONT POINT-SIZE="6">$nested</FONT></TD></TR>
                       </TABLE>
                     </TD>
                   </TR>
                 </TABLE>
                 """.trimIndent()
+        }
 
         private fun <T> Node.use(transition: Transition<T>): Link =
-            Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
+            when (transition.endPoint.history) {
+                History.H -> Factory.to(this.port("hist")).with(transition.label, Font.name("Arial"), Font.size(10))
+                History.Hd -> Factory.to(this.port("deep")).with(transition.label, Font.name("Arial"), Font.size(10))
+
+                else -> Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
+            }
     }
 }
