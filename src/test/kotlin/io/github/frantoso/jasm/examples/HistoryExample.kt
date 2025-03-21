@@ -291,7 +291,7 @@ class HistoryExample {
             io.github.frantoso.jasm.testutil
                 .MultipleDiagramGenerator(Main().machine)
 
-        generator.toSvg("build/reports/history.svg")
-        generator.toPng("build/reports/history.png")
+        generator.toSvg("build/reports/history.svg", 1000)
+        generator.toPng("build/reports/history.png", 1000)
     }
 }
