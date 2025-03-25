@@ -10,13 +10,12 @@ import org.assertj.core.api.Assertions.assertThat
 class TestData<T>(
     val startState: State,
     val event: Event,
-    val data: T,
     val endState: EndState,
     val wasHandled: Boolean,
 )
 
 fun <T> testStateChange(
-    fsm: Fsm<T>,
+    fsm: Fsm,
     testData: List<TestData<T>>,
 ) {
     val debugInterface = fsm.debugInterface
@@ -24,7 +23,7 @@ fun <T> testStateChange(
     testData.forEach {
         debugInterface.setState(it.startState)
 
-        val handled = fsm.trigger(it.event, it.data)
+        val handled = fsm.trigger(it.event)
 
         assertThat(fsm.currentState.state).isEqualTo(it.endState)
         assertThat(handled).isEqualTo(it.wasHandled)

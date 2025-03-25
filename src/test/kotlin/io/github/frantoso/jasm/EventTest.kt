@@ -20,8 +20,8 @@ class EventTest {
 
     @Test
     fun getNoEvent() {
-        val event1 = NoEvent
-        val event2 = NoEvent
+        val event1 = NoEvent()
+        val event2 = NoEvent()
 
         assertThat(event1).isSameAs(event2)
         assertThat(event1.name).isEqualTo("NoEvent")

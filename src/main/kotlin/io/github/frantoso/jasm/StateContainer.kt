@@ -5,26 +5,23 @@ import java.util.Collections
 /**
  * This class models the behavior of a state of the state machine. It encapsulates a state and stores all it's
  * transitions, children and action functions.
- * @param TData The type of data provided to the condition and action handlers.
  * @param state
  * @param children Gets a list of all child state machines.
  * @param transitions Gets a list storing the transition information.
  * @param onEntry Gets the handler method for the states entry action.
  * @param onExit Gets the handler method for the states exit action.
- * @param onDoInState Gets the handler method for the reaction in the state.
  */
-abstract class StateContainerBase<TData, TState : IState>(
+abstract class StateContainerBase<TState : IState>(
     val state: TState,
-    protected val children: List<FsmSync<TData>>,
-    internal val transitions: List<Transition<TData>>,
-    protected val onEntry: (TData) -> Unit,
-    protected val onExit: (TData) -> Unit,
-    protected val onDoInState: (TData) -> Unit,
+    val children: List<FsmSync>,
+    val transitions: List<ITransition>,
+    val onEntry: IAction,
+    val onExit: IAction,
 ) {
     /**
      * The list of currently working child state machines.
      */
-    private val activeChildren = Collections.synchronizedList(ArrayList<FsmSync<TData>>())
+    private val activeChildren = Collections.synchronizedList(ArrayList<FsmSync>())
 
     /**
      * Gets a value indicating whether this state has active child machines.
@@ -49,15 +46,25 @@ abstract class StateContainerBase<TData, TState : IState>(
 
     /**
      * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
-     * @param data The data object.
+     */
+    fun start() = start(NoEvent(), History.None)
+
+    /**
+     * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
+     */
+    fun <T : Any> start(data: T) = start(DataNoEvent(data), History.None)
+
+    /**
+     * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
+     * @param trigger The event which initiated this start.
      * @param history The kind of history to use.
      */
     fun start(
-        data: TData,
+        trigger: Event,
         history: History,
     ) {
         if (history.isHistory) {
-            if (tryStartHistory(data)) {
+            if (tryStartHistory(trigger)) {
                 return
             }
         }
@@ -66,21 +73,20 @@ abstract class StateContainerBase<TData, TState : IState>(
             return
         }
 
-        fireOnEntry(data)
-        startChildren(data)
+        onEntry.fire(trigger)
+        startChildren()
     }
 
     /**
      * Let all direct child FSMs continue working. Calls start() if there is no active child.
-     * @param data The data object.
      * @return Returns a value indicating whether the start was successful.
      */
-    private fun tryStartHistory(data: TData): Boolean {
+    private fun tryStartHistory(trigger: Event): Boolean {
         if (!hasActiveChildren) {
             return false
         }
 
-        children.forEach { child -> child.currentState.start(data, History.None) }
+        children.forEach { child -> child.currentState.start(trigger, History.None) }
 
         return true
     }
@@ -92,62 +98,42 @@ abstract class StateContainerBase<TData, TState : IState>(
     private fun tryStartDeepHistory(): Boolean = hasActiveChildren
 
     /**
-     * Fires the Do event.
-     * @param data The data object.
-     */
-    fun fireDoInState(data: TData) {
-        activeChildren.forEach { child -> child.doAction(data) }
-        fire(onDoInState, data, "State.OnDo")
-    }
-
-    /**
      * Triggers a transition.
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns the data needed to proceed with the new state.
      */
-    internal fun trigger(
-        trigger: Event,
-        data: TData,
-    ): ChangeStateData {
-        val result = processChildren(trigger, data)
-        return if (result.first) ChangeStateData(true) else processTransitions(result.second, data)
+    internal fun trigger(trigger: Event): ChangeStateData {
+        val result = processChildren(trigger)
+
+        return if (result.first) ChangeStateData(true) else processTransitions(result.second)
     }
 
     /**
      * Starts all registered sub state-machines.
-     * @param data The data object.
      */
-    internal fun startChildren(data: TData) {
+    internal fun startChildren() {
         activeChildren.clear()
-        children.forEach { startChild(it, data) }
+        children.forEach { startChild(it) }
     }
 
     /**
      * Starts the specified child machine.
      * @param child The child machine to start.
-     * @param data The data object.
      */
-    private fun startChild(
-        child: FsmSync<TData>,
-        data: TData,
-    ) {
+    private fun startChild(child: FsmSync) {
+        // ToDo provide start with data
         activeChildren.add(child)
-        child.start(data)
+        child.start()
     }
 
     /**
      * Processes the transitions.
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns the data needed to proceed with the new state.
      */
-    private fun processTransitions(
-        trigger: Event,
-        data: TData,
-    ): ChangeStateData {
-        for (transition in transitions.filter { it.trigger == trigger && it.guard(data) }) {
-            return changeState(transition, data)
+    private fun processTransitions(trigger: Event): ChangeStateData {
+        for (transition in transitions.filter { it.isAllowed(trigger) }) {
+            return changeState(trigger, transition)
         }
 
         return ChangeStateData(false)
@@ -156,67 +142,56 @@ abstract class StateContainerBase<TData, TState : IState>(
     /**
      * Processes the child machines.
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns as result true if the event was handled; false otherwise. Normally the returned trigger is the
      *      original one.
      *      Exception:
      *      If the last child machine went to the final state, the returned result is false (Pair.first) and
      *      the returned trigger is FsmEvent.NoEvent (Pair.second).
      */
-    private fun processChildren(
-        trigger: Event,
-        data: TData,
-    ): Pair<Boolean, Event> {
+    private fun processChildren(trigger: Event): Pair<Boolean, Event> {
         if (!hasActiveChildren) {
             return Pair(false, trigger)
         }
 
-        val handled = triggerChildren(trigger, data)
+        val handled = triggerChildren(trigger)
         if (handled) {
             return Pair(true, trigger)
         }
 
-        return Pair(false, if (hasActiveChildren) trigger else NoEvent)
+        return Pair(false, if (hasActiveChildren) trigger else NoEvent())
     }
 
     /**
      * Changes the state to the one stored in the transition object.
      * @param transition The actual transition.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns the data needed to proceed with the new state.
      */
     private fun changeState(
-        transition: Transition<TData>,
-        data: TData,
+        trigger: Event,
+        transition: ITransition,
     ): ChangeStateData {
-        fireOnExit(data)
+        onExit.fire(trigger)
         return ChangeStateData(!transition.isToFinal, transition.endPoint)
     }
 
     /**
      * Triggers the child machines.
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns true if the event was handled; false otherwise.
      */
-    private fun triggerChildren(
-        trigger: Event,
-        data: TData,
-    ): Boolean = activeChildren.toList().map { triggerChild(it, trigger, data) }.any { it }
+    private fun triggerChildren(trigger: Event): Boolean = activeChildren.toList().map { triggerChild(it, trigger) }.any { it }
 
     /**
      * Triggers the specified child machine.
      * @param child The child machine to trigger.
      * @param trigger The event occurred.
-     * @param data The data object.
      * @return Returns true if the event was handled; false otherwise.
      */
     private fun triggerChild(
-        child: FsmSync<TData>,
+        child: FsmSync,
         trigger: Event,
-        data: TData,
     ): Boolean {
-        val handled = child.trigger(trigger, data)
+        val handled = child.trigger(trigger)
 
         if (child.hasFinished) {
             activeChildren.remove(child)
@@ -226,47 +201,19 @@ abstract class StateContainerBase<TData, TState : IState>(
     }
 
     /**
-     * Fires the OnEntry event.
-     * @param data The data object.
-     */
-    internal fun fireOnEntry(data: TData) = fire(onEntry, data, "State.OnEntry")
-
-    /**
-     * Fires the OnExit event.
-     * @param data The data object.
-     */
-    internal fun fireOnExit(data: TData) = fire(onExit, data, "State.OnExit")
-
-    /**
-     * Calls one of the actions of the state.
-     * @param handler Action to perform.
-     * @param data The data object.
-     * @param actionName The name of the action for error processing.
-     */
-    private fun fire(
-        handler: (TData) -> Unit,
-        data: TData,
-        actionName: String,
-    ) = try {
-        handler(data)
-    } catch (ex: Throwable) {
-        throw FsmException("Error calling the $actionName action", state.name, ex)
-    }
-
-    /**
      * This interface provides methods which are not intended to use for normal operation.
      * Use the methods for testing or diagnosis purposes.
      */
-    interface Debug<T> {
+    interface Debug {
         /**
          * Gets a snapshot of the transitions.
          */
-        val transitionDump: List<Transition<T>>
+        val transitionDump: List<ITransition>
 
         /**
          * Gets a snapshot of the child machines.
          */
-        val childDump: List<Fsm<T>>
+        val childDump: List<Fsm>
     }
 
     /**
@@ -279,44 +226,40 @@ abstract class StateContainerBase<TData, TState : IState>(
      * provided for test and diagnosis.
      */
     val debugInterface =
-        object : Debug<TData> {
-            override val transitionDump: List<Transition<TData>> get() = transitions.toList()
+        object : Debug {
+            override val transitionDump: List<ITransition> get() = transitions.toList()
 
-            override val childDump: List<Fsm<TData>> get() = children.toList()
+            override val childDump: List<Fsm> get() = children.toList()
         }
 }
 
 /**
  * The container for normal states.
- * @param TData The type of data provided to the condition and action handlers.
  * @param state The state to encapsulate.
  * @param children Gets a list of all child state machines.
  * @param transitions Gets a list storing the transition information.
  * @param onEntry Gets the handler method for the states entry action.
  * @param onExit Gets the handler method for the states exit action.
- * @param onDoInState Gets the handler method for the reaction in the state.
  */
-class StateContainer<TData>(
+class StateContainer(
     state: State,
-    children: List<FsmSync<TData>>,
-    transitions: List<Transition<TData>>,
-    onEntry: (TData) -> Unit,
-    onExit: (TData) -> Unit,
-    onDoInState: (TData) -> Unit,
-) : StateContainerBase<TData, State>(state, children, transitions, onEntry, onExit, onDoInState) {
+    children: List<FsmSync>,
+    transitions: List<ITransition>,
+    onEntry: IAction,
+    onExit: IAction,
+) : StateContainerBase<State>(state, children, transitions, onEntry, onExit) {
     /**
      * Adds a new child machine.
      * @param stateMachine The child machine to add.
      * @return Returns a new state container.
      */
-    fun child(stateMachine: FsmSync<TData>): StateContainer<TData> =
+    fun child(stateMachine: FsmSync): StateContainer =
         StateContainer(
             state = state,
             children = children + listOf(stateMachine),
             transitions = transitions,
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
         )
 
     /**
@@ -324,14 +267,13 @@ class StateContainer<TData>(
      * @param stateMachines The children to add.
      * @return Returns a new state container.
      */
-    fun children(stateMachines: List<FsmSync<TData>>): StateContainer<TData> =
+    fun children(stateMachines: List<FsmSync>): StateContainer =
         StateContainer(
             state = state,
             children = children + stateMachines,
             transitions = transitions,
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
         )
 
     /**
@@ -339,14 +281,13 @@ class StateContainer<TData>(
      * @param action The handler method for the states entry action.
      * @return Returns a new state container.
      */
-    fun entry(action: (TData) -> Unit): StateContainer<TData> =
+    fun entry(action: IAction): StateContainer =
         StateContainer(
             state = state,
             children = children,
             transitions = transitions,
             onEntry = action,
             onExit = onExit,
-            onDoInState = onDoInState,
         )
 
     /**
@@ -354,29 +295,13 @@ class StateContainer<TData>(
      * @param action The handler method for the states exit action.
      * @return Returns a new state container.
      */
-    fun exit(action: (TData) -> Unit): StateContainer<TData> =
+    fun exit(action: IAction): StateContainer =
         StateContainer(
             state = state,
             children = children,
             transitions = transitions,
             onEntry = onEntry,
             onExit = action,
-            onDoInState = onDoInState,
-        )
-
-    /**
-     * Sets the handler method for the reaction in the state.
-     * @param action The handler method for the states do action.
-     * @return Returns a new state container.
-     */
-    fun doInState(action: (TData) -> Unit): StateContainer<TData> =
-        StateContainer(
-            state = state,
-            children = children,
-            transitions = transitions,
-            onEntry = onEntry,
-            onExit = onExit,
-            onDoInState = action,
         )
 
     /**
@@ -386,18 +311,35 @@ class StateContainer<TData>(
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    fun transition(
-        trigger: Event,
+    inline fun <reified E : Event> transition(
         stateTo: EndState,
-        guard: (TData) -> Boolean = { true },
-    ): StateContainer<TData> =
+        noinline guard: () -> Boolean = { true },
+    ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + Transition(trigger, stateTo, guard),
+            transitions = transitions + transitionX<E>(stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds a new transition to the state.
+     * @param trigger The Event that initiates this transition.
+     * @param stateTo A reference to the end point of this transition.
+     * @param guard Condition handler of this transition.
+     * @return Returns a new state container.
+     */
+    inline fun <reified E : DataEvent<T>, reified T : Any> transition(
+        stateTo: EndState,
+        noinline guard: (T?) -> Boolean = { true },
+    ): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions + transitionX<E, T>(stateTo, guard),
+            onEntry = onEntry,
+            onExit = onExit,
         )
 
     /**
@@ -406,17 +348,16 @@ class StateContainer<TData>(
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    fun transition(
+    inline fun <reified T : Any> transitionT(
         stateTo: EndState,
-        guard: (TData) -> Boolean = { true },
-    ): StateContainer<TData> =
+        noinline guard: (T?) -> Boolean = { true },
+    ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + Transition(NoEvent, stateTo, guard),
+            transitions = transitions + transitionX<DataNoEvent<T>, T>(stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
         )
 
     /**
@@ -426,18 +367,35 @@ class StateContainer<TData>(
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    fun transition(
-        trigger: Event,
+    inline fun <reified E : Event> transition(
         endPoint: TransitionEndPoint,
-        guard: (TData) -> Boolean = { true },
-    ): StateContainer<TData> =
+        noinline guard: () -> Boolean = { true },
+    ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + Transition(trigger, endPoint, guard),
+            transitions = transitions + transitionX<E>(endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds a new transition to the state.
+     * @param trigger The Event that initiates this transition.
+     * @param guard Condition handler of this transition.
+     * @param endPoint A reference to the end point of this transition.
+     * @return Returns a new state container.
+     */
+    inline fun <reified E : DataEvent<T>, reified T : Any> transition(
+        endPoint: TransitionEndPoint,
+        noinline guard: (T?) -> Boolean = { true },
+    ): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions + transitionX<E, T>(endPoint, guard),
+            onEntry = onEntry,
+            onExit = onExit,
         )
 
     /**
@@ -446,17 +404,16 @@ class StateContainer<TData>(
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    fun transition(
+    inline fun <reified T : Any> transitionT(
         endPoint: TransitionEndPoint,
-        guard: (TData) -> Boolean = { true },
-    ): StateContainer<TData> =
+        noinline guard: (T?) -> Boolean = { true },
+    ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + Transition(NoEvent, endPoint, guard),
+            transitions = transitions + transitionX<DataNoEvent<T>, T>(endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
         )
 
     /**
@@ -465,70 +422,78 @@ class StateContainer<TData>(
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    fun transitionToFinal(
-        trigger: Event,
-        guard: (TData) -> Boolean = { true },
-    ): StateContainer<TData> =
+    inline fun <reified E : DataEvent<T>, reified T : Any> transitionToFinal(noinline guard: (T?) -> Boolean = { true }): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + Transition(trigger, FinalState(), guard),
+            transitions = transitions + transitionX<E, T>(FinalState(), guard),
             onEntry = onEntry,
             onExit = onExit,
-            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds a new transition to the final state.
+     * @param trigger The Event that initiates this transition.
+     * @param guard Condition handler of this transition.
+     * @return Returns a new state container.
+     */
+    inline fun <reified E : Event> transitionToFinal(noinline guard: () -> Boolean = { true }): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions + transitionX<E>(FinalState(), guard),
+            onEntry = onEntry,
+            onExit = onExit,
         )
 }
 
 /**
  * This class represents a particular state of the state machine.
- * @param TData The type of data provided to the condition and action handlers.
  * @param state The initial state to encapsulate.
  * @param transitions Gets a list storing the transition information.
  */
-class InitialStateContainer<TData>(
+class InitialStateContainer(
     state: InitialState,
-    transitions: List<Transition<TData>>,
-) : StateContainerBase<TData, InitialState>(state, emptyList(), transitions, {}, {}, {}) {
+    transitions: List<ITransition>,
+) : StateContainerBase<InitialState>(state, emptyList(), transitions, NoAction, NoAction) {
     /**
      * Adds a new transition to the state.
      * @param stateTo A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    fun transition(stateTo: EndState): InitialStateContainer<TData> =
+    fun transition(stateTo: EndState): InitialStateContainer =
         InitialStateContainer(
             state = state,
-            transitions = listOf(Transition(StartEvent, stateTo) { true }),
+            transitions = listOf(transitionX<StartEvent>(stateTo) { true }),
         )
 }
 
 /**
  * This class represents a particular state of the state machine.
- * @param TData The type of data provided to the condition and action handlers.
  * @param state The final state to encapsulate.
  */
-class FinalStateContainer<TData>(
+class FinalStateContainer(
     state: FinalState,
-) : StateContainerBase<TData, FinalState>(state, emptyList(), emptyList(), {}, {}, {})
+) : StateContainerBase<FinalState>(state, emptyList(), emptyList(), NoAction, NoAction)
 
 /**
  * Encapsulates a normal state in a container.
  */
-fun <T> State.with(): StateContainer<T> =
+fun State.use(): StateContainer =
     StateContainer(
         state = this,
         children = emptyList(),
         transitions = emptyList(),
-        onEntry = {},
-        onExit = {},
-        onDoInState = {},
+        onEntry = NoAction,
+        onExit = NoAction,
     )
 
 /**
  * Encapsulates a final state in a container.
  */
-fun <T> FinalState.with(): FinalStateContainer<T> = FinalStateContainer(state = this)
+fun FinalState.use(): FinalStateContainer = FinalStateContainer(state = this)
 
 /**
- * Encapsulates a final state in a container.
+ * Encapsulates an initial state in a container.
  */
-fun <T> InitialState.with(): InitialStateContainer<T> = InitialStateContainer(state = this, transitions = emptyList())
+fun InitialState.use(): InitialStateContainer = InitialStateContainer(state = this, transitions = emptyList())

@@ -18,20 +18,18 @@ import kotlin.coroutines.CoroutineContext
  * is changed. It should be used mainly for informational purpose.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
- *
- * @param T The type of data provided to the condition and action handlers.
  */
-abstract class Fsm<T>(
+abstract class Fsm(
     val name: String,
-    private val onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    private val onTriggered: ((sender: Fsm<T>, currentState: IState, event: Event, handled: Boolean) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    otherStates: List<StateContainerBase<T, out IState>>,
+    private val onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    private val onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    otherStates: List<StateContainerBase<out IState>>,
 ) {
     /**
      * Gets the initial state.
      */
-    private val initial: InitialStateContainer<T> = InitialState().with<T>().transition(startState.state)
+    private val initial: InitialStateContainer = InitialState().use().transition(startState.state)
 
     /**
      * The start state in a list for later use.
@@ -41,17 +39,17 @@ abstract class Fsm<T>(
     /**
      * A list of all states excluding the initial state.
      */
-    private val states: List<StateContainerBase<T, out IState>> =
+    private val states: List<StateContainerBase<out IState>> =
         startStateAsList + otherStates + destinationOnlyStates(startState, otherStates) + finalStateOrNot(otherStates)
 
     /**
      * Gets the final state (as list) or an empty list if there is no final state used in the transitions.
      */
-    private fun finalStateOrNot(otherStates: List<StateContainerBase<T, out IState>>): List<StateContainerBase<T, out IState>> =
+    private fun finalStateOrNot(otherStates: List<StateContainerBase<out IState>>): List<StateContainerBase<out IState>> =
         if ((otherStates + startStateAsList).flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
             emptyList()
         } else {
-            listOf(FinalState().with())
+            listOf(FinalState().use())
         }
 
     /**
@@ -59,9 +57,9 @@ abstract class Fsm<T>(
      * It's not a normal use case, but it may happen.
      */
     private fun destinationOnlyStates(
-        startState: StateContainerBase<T, out EndState>,
-        otherStates: List<StateContainerBase<T, out IState>>,
-    ): List<StateContainerBase<T, out IState>> =
+        startState: StateContainerBase<out EndState>,
+        otherStates: List<StateContainerBase<out IState>>,
+    ): List<StateContainerBase<out IState>> =
         (listOf(startState) + otherStates).let { knownStates ->
             knownStates
                 .asSequence()
@@ -70,15 +68,15 @@ abstract class Fsm<T>(
                 }.distinct()
                 .filterIsInstance<State>()
                 .filterNot { state -> knownStates.map { it.state }.contains(state) }
-                .map { it.with<T>() }
+                .map { it.use() }
                 .toList()
         }
 
     init {
         val isNoEventMisused =
             states
-                .flatMap { state -> state.transitions.map { state to it } }
-                .any { !it.first.hasChildren && it.second.trigger == NoEvent }
+                .flatMap { state -> state.debugInterface.transitionDump.map { state to it } }
+                .any { !it.first.hasChildren && (it.second::class == NoEvent::class || it.second::class == DataNoEvent::class) }
 
         if (isNoEventMisused) {
             throw FsmException("A transition without event can only be used for nested states!")
@@ -88,7 +86,7 @@ abstract class Fsm<T>(
     /**
      * Gets the name of the currently active state.
      */
-    var currentState: StateContainerBase<T, out IState> = initial
+    var currentState: StateContainerBase<out IState> = initial
         private set
 
     /**
@@ -104,12 +102,10 @@ abstract class Fsm<T>(
     /**
      * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user defined state.
      * This method calls the initial states OnEntry method.
-     *
-     * @param data The data object.
      */
-    fun start(data: T) {
+    fun start() {
         currentState = initial
-        triggerEvent(StartEvent, data)
+        triggerEvent(StartEvent)
         onStart()
     }
 
@@ -125,43 +121,28 @@ abstract class Fsm<T>(
     override fun toString(): String = name
 
     /**
-     * Fires the Do event.
+     * Triggers a transition.
      *
-     * @param data The data object.
+     * @param trigger The event occurred.
+     * @return Returns true if the event was handled; false otherwise. In case of
+     * asynchronous processing it returns null.
      */
-    fun doAction(data: T) = currentState.fireDoInState(data)
+    abstract fun trigger(trigger: Event): Boolean
 
     /**
      * Triggers a transition.
      *
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns true if the event was handled; false otherwise. In case of
      * asynchronous processing it returns null.
      */
-    abstract fun trigger(
-        trigger: Event,
-        data: T,
-    ): Boolean
-
-    /**
-     * Triggers a transition.
-     *
-     * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
-     * @return Returns true if the event was handled; false otherwise. In case of
-     * asynchronous processing it returns null.
-     */
-    protected fun triggerEvent(
-        trigger: Event,
-        data: T,
-    ): Boolean {
+    protected fun triggerEvent(trigger: Event): Boolean {
         synchronized(this) {
             checkParameter(trigger)
 
-            val changeStateData = currentState.trigger(trigger, data)
+            val changeStateData = currentState.trigger(trigger)
             raiseTriggered(trigger, changeStateData.handled)
-            activateState(changeStateData, data)
+            activateState(trigger, changeStateData)
 
             return changeStateData.handled
         }
@@ -171,11 +152,10 @@ abstract class Fsm<T>(
      * Activates the new state.
      *
      * @param changeStateData The data needed to activate the next state.
-     * @param data The data.
      */
     private fun activateState(
+        trigger: Event,
         changeStateData: ChangeStateData,
-        data: T,
     ) {
         if (changeStateData.endPoint == null) {
             return
@@ -187,7 +167,7 @@ abstract class Fsm<T>(
 
         raiseStateChanged(oldState, currentState)
 
-        currentState.start(data, changeStateData.endPoint.history)
+        currentState.start(trigger, changeStateData.endPoint.history)
     }
 
     /**
@@ -202,8 +182,8 @@ abstract class Fsm<T>(
      * @param newState The new state.
      */
     private fun raiseStateChanged(
-        oldState: StateContainerBase<T, out IState>,
-        newState: StateContainerBase<T, out IState>,
+        oldState: StateContainerBase<out IState>,
+        newState: StateContainerBase<out IState>,
     ) {
         try {
             onStateChanged(this, oldState.state, newState.state)
@@ -233,7 +213,7 @@ abstract class Fsm<T>(
      * This interface provides methods which are not intended to use for normal operation.
      * Use the methods for testing purposes or to recover from a reboot.
      */
-    interface Debug<T> {
+    interface Debug {
         /**
          * Should set the provided state as active state.
          * @param state The state to set as current state.
@@ -244,29 +224,25 @@ abstract class Fsm<T>(
          * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
          *  - IMPORTANT: This method does not call the entry function of the state.
          * @param state The state to set as current state.
-         * @param data The data object.
          */
-        fun resume(
-            state: State,
-            data: T,
-        )
+        fun resume(state: State)
 
         /**
          * Gets a snapshot of the states.
          */
-        val stateDump: List<StateContainerBase<T, out IState>>
+        val stateDump: List<StateContainerBase<out IState>>
 
         /**
          * Gets initial state.
          */
-        val initialState: InitialStateContainer<T>
+        val initialState: InitialStateContainer
     }
 
     /**
      * Sets the provided state as active state.
      * @param state The state to set as current state.
      */
-    private fun setState(state: StateContainerBase<T, out IState>) {
+    private fun setState(state: StateContainerBase<out IState>) {
         val stateBefore = currentState
         currentState = state
         raiseStateChanged(stateBefore, currentState)
@@ -276,14 +252,10 @@ abstract class Fsm<T>(
      * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
      *  - IMPORTANT: This method does not call the entry function of the state.
      * @param state The state to set as current state.
-     * @param data The data object.
      */
-    private fun resume(
-        state: State,
-        data: T,
-    ) {
+    private fun resume(state: State) {
         setState(state.container)
-        state.container.startChildren(data)
+        state.container.startChildren()
     }
 
     /**
@@ -291,17 +263,14 @@ abstract class Fsm<T>(
      * provided for tests.
      */
     val debugInterface =
-        object : Debug<T> {
+        object : Debug {
             override fun setState(state: State) = this@Fsm.setState(state.container)
 
-            override fun resume(
-                state: State,
-                data: T,
-            ) = this@Fsm.resume(state, data)
+            override fun resume(state: State) = this@Fsm.resume(state)
 
-            override val stateDump: List<StateContainerBase<T, out IState>> = states
+            override val stateDump: List<StateContainerBase<out IState>> = states
 
-            override val initialState: InitialStateContainer<T> = initial
+            override val initialState: InitialStateContainer = initial
         }
 
     companion object {
@@ -311,7 +280,7 @@ abstract class Fsm<T>(
          * @param trigger The event parameter to check.
          */
         internal fun checkParameter(trigger: Event) {
-            if (trigger == NoEvent) {
+            if (trigger::class == NoEvent::class || trigger::class == DataNoEvent::class) {
                 throw FsmException("Fsm.trigger: A trigger event cannot be NoEvent!")
             }
         }
@@ -329,27 +298,21 @@ abstract class Fsm<T>(
  * is changed. It should be used mainly for informational purpose.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
- *
- * @param T The type of data provided to the condition and action handlers.
  */
-class FsmSync<T>(
+class FsmSync(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm<T>, currentState: IState, event: Event, handled: Boolean) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    otherStates: List<StateContainerBase<T, out IState>>,
-) : Fsm<T>(name, onStateChanged, onTriggered, startState, otherStates) {
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    otherStates: List<StateContainerBase<out IState>>,
+) : Fsm(name, onStateChanged, onTriggered, startState, otherStates) {
     /**
      * Triggers a transition.
      *
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns true if the event was handled; false otherwise.
      */
-    override fun trigger(
-        trigger: Event,
-        data: T,
-    ): Boolean = triggerEvent(trigger, data)
+    override fun trigger(trigger: Event): Boolean = triggerEvent(trigger)
 }
 
 /**
@@ -363,17 +326,15 @@ class FsmSync<T>(
  * is changed. It should be used mainly for informational purpose.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
- *
- * @param T The type of data provided to the condition and action handlers.
  */
-class FsmAsync<T>(
+class FsmAsync(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm<T>, currentState: IState, event: Event, handled: Boolean) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    otherStates: List<StateContainerBase<T, out IState>>,
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    otherStates: List<StateContainerBase<out IState>>,
     override val coroutineContext: CoroutineContext = CoroutineScope(Dispatchers.Default.limitedParallelism(1)).coroutineContext,
-) : Fsm<T>(name, onStateChanged, onTriggered, startState, otherStates),
+) : Fsm(name, onStateChanged, onTriggered, startState, otherStates),
     CoroutineScope {
     /**
      * The mutex to synchronize the placing of the events.
@@ -394,16 +355,12 @@ class FsmAsync<T>(
      * Triggers a transition.
      *
      * @param trigger The event occurred.
-     * @param data The data provided to the condition and action handlers.
      * @return Returns true.
      */
-    override fun trigger(
-        trigger: Event,
-        data: T,
-    ): Boolean {
+    override fun trigger(trigger: Event): Boolean {
         this.launch {
             mutex.withLock {
-                triggerEvent(trigger, data)
+                triggerEvent(trigger)
             }
         }
 
@@ -417,11 +374,11 @@ class FsmAsync<T>(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmOf(
+fun fsmOf(
     name: String,
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmSync<T> = FsmSync(name, { _, _, _ -> }, { _, _, _, _ -> }, startState, otherStates.toList())
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmSync = FsmSync(name, { _, _, _ -> }, { _, _, _, _ -> }, startState, otherStates.toList())
 
 /**
  * Creates a synchronous FSM from the provided data.
@@ -433,13 +390,13 @@ fun <T> fsmOf(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmOf(
+fun fsmOf(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm<T>, currentState: IState, event: Event, handled: Boolean) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmSync<T> = FsmSync(name, onStateChanged, onTriggered, startState, otherStates.toList())
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmSync = FsmSync(name, onStateChanged, onTriggered, startState, otherStates.toList())
 
 /**
  * Creates a synchronous FSM from the provided data.
@@ -449,12 +406,12 @@ fun <T> fsmOf(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmOf(
+fun fsmOf(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmSync<T> = FsmSync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmSync = FsmSync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
 
 /**
  * Creates an asynchronous FSM from the provided data.
@@ -462,11 +419,11 @@ fun <T> fsmOf(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmAsyncOf(
+fun fsmAsyncOf(
     name: String,
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmAsync<T> = FsmAsync(name, { _, _, _ -> }, { _, _, _, _ -> }, startState, otherStates.toList())
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmAsync = FsmAsync(name, { _, _, _ -> }, { _, _, _, _ -> }, startState, otherStates.toList())
 
 /**
  * Creates an asynchronous FSM from the provided data.
@@ -478,13 +435,13 @@ fun <T> fsmAsyncOf(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmAsyncOf(
+fun fsmAsyncOf(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm<T>, currentState: IState, event: Event, handled: Boolean) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmAsync<T> = FsmAsync(name, onStateChanged, onTriggered, startState, otherStates.toList())
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmAsync = FsmAsync(name, onStateChanged, onTriggered, startState, otherStates.toList())
 
 /**
  * Creates an asynchronous FSM from the provided data.
@@ -494,9 +451,9 @@ fun <T> fsmAsyncOf(
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
-fun <T> fsmAsyncOf(
+fun fsmAsyncOf(
     name: String,
-    onStateChanged: ((sender: Fsm<T>, from: IState, to: IState) -> Unit),
-    startState: StateContainerBase<T, out EndState>,
-    vararg otherStates: StateContainerBase<T, out IState>,
-): FsmAsync<T> = FsmAsync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
+    onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
+    startState: StateContainerBase<out EndState>,
+    vararg otherStates: StateContainerBase<out IState>,
+): FsmAsync = FsmAsync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
