@@ -82,8 +82,8 @@ class FsmSyncTest {
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -97,8 +97,8 @@ class FsmSyncTest {
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -110,9 +110,9 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state).isSameAs(state1)
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState).isSameAs(state1)
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isFalse
     }
 
     @Test
@@ -123,9 +123,9 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state).isSameAs(state2)
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState).isSameAs(state2)
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isFalse
     }
 
     @Test
@@ -137,8 +137,8 @@ class FsmSyncTest {
 
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isTrue
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isTrue
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isTrue
     }
 
     @Test
@@ -391,7 +391,7 @@ class FsmSyncTest {
 
         fsm.debugInterface.resume(state2)
 
-        assertThat(fsm.currentState.state).isEqualTo(state2)
+        assertThat(fsm.currentState).isEqualTo(state2)
     }
 
     @Nested
@@ -455,55 +455,55 @@ class FsmSyncTest {
         fun `test use of children`() {
             mainMachine.start()
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(mainMachine.currentState).isEqualTo(state1Main)
             assertThat(childMachine1.isRunning).isFalse
             assertThat(childMachine2.isRunning).isFalse
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isTrue
             assertThat(childMachine2.isRunning).isTrue
-            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+            assertThat(childMachine1.currentState).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state1Child2)
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
-            assertThat(childMachine1.currentState.state).isEqualTo(state2Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state2Child2)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
+            assertThat(childMachine1.currentState).isEqualTo(state2Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state2Child2)
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.currentState.state).isEqualTo(state3Child2)
+            assertThat(childMachine2.currentState).isEqualTo(state3Child2)
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.currentState.state).isEqualTo(state4Child2)
+            assertThat(childMachine2.currentState).isEqualTo(state4Child2)
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state3Main)
-            assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.isRunning).isFalse
-
-            mainMachine.trigger(Tick)
-
-            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(mainMachine.currentState).isEqualTo(state3Main)
             assertThat(childMachine1.isRunning).isFalse
             assertThat(childMachine2.isRunning).isFalse
 
             mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state1Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.isRunning).isFalse
+
+            mainMachine.trigger(Tick)
+
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isTrue
             assertThat(childMachine2.isRunning).isTrue
-            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+            assertThat(childMachine1.currentState).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state1Child2)
         }
     }
 }

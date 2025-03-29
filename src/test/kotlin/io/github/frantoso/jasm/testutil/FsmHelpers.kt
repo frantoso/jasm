@@ -25,7 +25,7 @@ fun testStateChange(
 
         val handled = fsm.trigger(it.event)
 
-        assertThat(fsm.currentState.state).isEqualTo(it.endState)
+        assertThat(fsm.currentState).isEqualTo(it.endState)
         assertThat(handled).isEqualTo(it.wasHandled)
 
         if (it.endState is FinalState) return@forEach

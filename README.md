@@ -96,7 +96,7 @@ assertThat(fsm.isRunning).isTrue
 // trigger an event
 fsm.trigger(Tick)
 
-assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
+assertThat(fsm.currentState).isEqualTo(showingRedYellow)
 ```
 
 ## The classes

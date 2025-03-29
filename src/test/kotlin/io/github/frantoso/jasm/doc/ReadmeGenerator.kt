@@ -67,7 +67,7 @@ class ReadmeGenerator {
         // trigger an event
         fsm.trigger(Tick)
 
-        assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
+        assertThat(fsm.currentState).isEqualTo(showingRedYellow)
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README

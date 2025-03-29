@@ -23,8 +23,8 @@ class FsmAsyncTest {
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 

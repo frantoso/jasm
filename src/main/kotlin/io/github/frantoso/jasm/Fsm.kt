@@ -8,9 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Class managing the states of an FSM (finite state machine).
- * Initializes a new instance of the Fsm class.
- *
+ * A class managing the states of an FSM (finite state machine).
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
  * handler of the state is called.  It should be used mainly for informational purpose.
@@ -84,27 +82,32 @@ abstract class Fsm(
     }
 
     /**
-     * Gets the name of the currently active state.
+     * Gets the container of the currently active state.
      */
-    var currentState: StateContainerBase<out IState> = initial
+    var currentStateContainer: StateContainerBase<out IState> = initial
         private set
+
+    /**
+     * Gets the currently active state.
+     */
+    val currentState: IState get() = currentStateContainer.state
 
     /**
      * Gets a value indicating whether the automaton is started and has not reached the final state.
      */
-    val isRunning get() = currentState.state !is InitialState && !hasFinished
+    val isRunning get() = currentState !is InitialState && !hasFinished
 
     /**
      * Gets a value indicating whether the automaton has reached the final state.
      */
-    val hasFinished get() = currentState.state is FinalState
+    val hasFinished get() = currentState is FinalState
 
     /**
      * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user defined state.
      * This method calls the initial states OnEntry method.
      */
     fun start() {
-        currentState = initial
+        currentStateContainer = initial
         triggerEvent(StartEvent)
         onStart()
     }
@@ -116,7 +119,7 @@ abstract class Fsm(
      * @param data The data to provide to the function.
      */
     fun <T : Any> start(data: T) {
-        currentState = initial
+        currentStateContainer = initial
         triggerEvent(DataEvent(data, StartEvent::class))
         onStart()
     }
@@ -126,12 +129,12 @@ abstract class Fsm(
      * @param T The type of the data parameter.
      * @param data The data to provide to the function.
      */
-    fun <T : Any> doAction(data: T) = currentState.onDoInState.fire(DataEvent(data, NoEvent::class))
+    fun <T : Any> doAction(data: T) = currentStateContainer.onDoInState.fire(DataEvent(data, NoEvent::class))
 
     /**
      * Fires the Do event of the current state.
      */
-    fun doAction() = currentState.onDoInState.fire(NoEvent)
+    fun doAction() = currentStateContainer.onDoInState.fire(NoEvent)
 
     /**
      * Called when the FSM starts. Allows a derived class to execute additional startup code.
@@ -146,27 +149,25 @@ abstract class Fsm(
 
     /**
      * Triggers a transition.
-     *
-     * @param trigger The event occurred.
+     * @param event The event occurred.
      * @return Returns true if the event was handled; false otherwise. In case of
-     * asynchronous processing it returns null.
+     * asynchronous processing it returns true.
      */
-    abstract fun trigger(trigger: IEvent): Boolean
+    abstract fun trigger(event: IEvent): Boolean
 
     /**
      * Triggers a transition.
-     *
-     * @param trigger The event occurred.
+     * @param event The event occurred.
      * @return Returns true if the event was handled; false otherwise. In case of
-     * asynchronous processing it returns null.
+     * asynchronous processing it returns true.
      */
-    protected fun triggerEvent(trigger: IEvent): Boolean {
+    protected fun triggerEvent(event: IEvent): Boolean {
         synchronized(this) {
-            checkParameter(trigger)
+            checkParameter(event)
 
-            val changeStateData = currentState.trigger(trigger)
-            raiseTriggered(trigger, changeStateData.handled)
-            activateState(trigger, changeStateData)
+            val changeStateData = currentStateContainer.trigger(event)
+            raiseTriggered(event, changeStateData.handled)
+            activateState(event, changeStateData)
 
             return changeStateData.handled
         }
@@ -174,51 +175,44 @@ abstract class Fsm(
 
     /**
      * Activates the new state.
-     *
+     * @param event The event occurred.
      * @param changeStateData The data needed to activate the next state.
      */
     private fun activateState(
-        trigger: IEvent,
+        event: IEvent,
         changeStateData: ChangeStateData,
     ) {
         if (changeStateData.endPoint == null) {
             return
         }
 
-        val oldState = currentState
-
-        currentState = changeStateData.endPoint.state.container
-
-        raiseStateChanged(oldState, currentState)
-
-        currentState.start(trigger, changeStateData.endPoint.history)
+        val oldState = currentStateContainer
+        currentStateContainer = changeStateData.endPoint.state.container
+        raiseStateChanged(oldState, currentStateContainer)
+        currentStateContainer.start(event, changeStateData.endPoint.history)
     }
 
     /**
      * Gets the state container of the provided state. Will crash if the state is not in the list of states.
      */
-    val EndState.container get() = states.first { it.state == this }
+    private val EndState.container get() = states.first { it.state == this }
 
     /**
      * Raises the state changed event.
-     *
      * @param oldState The old state.
      * @param newState The new state.
      */
     private fun raiseStateChanged(
         oldState: StateContainerBase<out IState>,
         newState: StateContainerBase<out IState>,
-    ) {
-        try {
-            onStateChanged(this, oldState.state, newState.state)
-        } catch (ex: Throwable) {
-            throw FsmException("Error calling onStateChanged on machine $name.", "", ex)
-        }
+    ) = try {
+        onStateChanged(this, oldState.state, newState.state)
+    } catch (ex: Throwable) {
+        throw FsmException("Error calling onStateChanged on machine $name.", "", ex)
     }
 
     /**
      * Raises the triggered event.
-     *
      * @param event The event which was processed.
      * @param handled A value indicating whether the event was handled (true) or not (false).
      */
@@ -227,7 +221,7 @@ abstract class Fsm(
         handled: Boolean,
     ) {
         try {
-            onTriggered(this, currentState.state, event, handled)
+            onTriggered(this, currentState, event, handled)
         } catch (ex: Throwable) {
             throw FsmException("Error calling onTriggered on machine $name.", "", ex)
         }
@@ -267,9 +261,9 @@ abstract class Fsm(
      * @param state The state to set as current state.
      */
     private fun setState(state: StateContainerBase<out IState>) {
-        val stateBefore = currentState
-        currentState = state
-        raiseStateChanged(stateBefore, currentState)
+        val stateBefore = currentStateContainer
+        currentStateContainer = state
+        raiseStateChanged(stateBefore, currentStateContainer)
     }
 
     /**
@@ -279,7 +273,7 @@ abstract class Fsm(
      */
     private fun resume(state: State) {
         setState(state.container)
-        state.container.startChildren()
+        state.container.startChildren(NoEvent)
     }
 
     /**
@@ -300,11 +294,10 @@ abstract class Fsm(
     companion object {
         /**
          * Checks whether the provided parameter is valid.
-         *
-         * @param trigger The event parameter to check.
+         * @param event The event parameter to check.
          */
-        internal fun checkParameter(trigger: IEvent) {
-            if (trigger::class == NoEvent::class) {
+        internal fun checkParameter(event: IEvent) {
+            if (event::class == NoEvent::class) {
                 throw FsmException("Fsm.trigger: A trigger event cannot be NoEvent!")
             }
         }
@@ -313,8 +306,6 @@ abstract class Fsm(
 
 /**
  * Class managing the states of a synchronous FSM (finite state machine).
- * Initializes a new instance of the FsmSync class.
- *
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
  * handler of the state is called.  It should be used mainly for informational purpose.
@@ -332,12 +323,18 @@ class FsmSync(
 ) : Fsm(name, onStateChanged, onTriggered, startState, otherStates) {
     /**
      * Triggers a transition.
-     *
-     * @param trigger The event occurred.
+     * @param event The event occurred.
      * @return Returns true if the event was handled; false otherwise.
      */
-    override fun trigger(trigger: IEvent): Boolean = triggerEvent(trigger)
+    override fun trigger(event: IEvent): Boolean = triggerEvent(event)
 
+    /**
+     * Triggers a transition.
+     * @param T The type of the data parameter.
+     * @param event The event occurred.
+     * @param data The data to send with the event.
+     * @return Returns true if the event was handled; false otherwise.
+     */
     fun <T : Any> trigger(
         event: Event,
         data: T,
@@ -346,8 +343,6 @@ class FsmSync(
 
 /**
  * Class managing the states of an asynchronous FSM (finite state machine).
- * Initializes a new instance of the FsmAsync class.
- *
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
  * handler of the state is called.  It should be used mainly for informational purpose.
@@ -382,20 +377,26 @@ class FsmAsync(
 
     /**
      * Triggers a transition.
-     *
-     * @param trigger The event occurred.
+     * @param event The event occurred.
      * @return Returns true.
      */
-    override fun trigger(trigger: IEvent): Boolean {
+    override fun trigger(event: IEvent): Boolean {
         this.launch {
             mutex.withLock {
-                triggerEvent(trigger)
+                triggerEvent(event)
             }
         }
 
         return true
     }
 
+    /**
+     * Triggers a transition.
+     * @param T The type of the data parameter.
+     * @param event The event occurred.
+     * @param data The data to send with the event.
+     * @return Returns true.
+     */
     fun <T : Any> trigger(
         event: Event,
         data: T,

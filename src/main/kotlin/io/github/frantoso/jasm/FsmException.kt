@@ -2,8 +2,6 @@ package io.github.frantoso.jasm
 
 /**
  * Exception class used with the FSM.
- * Initializes a new instance of the FsmException class.
- *
  * @param message The error message that explains the reason for the exception.
  * @param stateName The state which throws this exception.
  * @param cause The exception that is the cause of the current exception.

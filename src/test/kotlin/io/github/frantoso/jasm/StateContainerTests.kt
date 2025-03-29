@@ -398,7 +398,7 @@ class StateContainerTests {
 
             assertThat(counter).isEqualTo(43)
             verify(exactly = 1) {
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
 
             verify(exactly = 0) {
@@ -417,7 +417,7 @@ class StateContainerTests {
 
             assertThat(counter).isEqualTo(42)
             verify(exactly = 1) {
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
 
             verify(exactly = 0) {
@@ -434,7 +434,7 @@ class StateContainerTests {
 
             verify(exactly = 1) {
                 container["tryStartHistory"](any<IEvent>())
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
 
             verify(exactly = 0) {
@@ -454,7 +454,7 @@ class StateContainerTests {
 
             verify(exactly = 0) {
                 container["tryStartDeepHistory"]()
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
         }
 
@@ -465,7 +465,7 @@ class StateContainerTests {
             container.start(NoEvent, History.Hd)
 
             verify(exactly = 1) {
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
         }
 
@@ -481,7 +481,7 @@ class StateContainerTests {
 
             verify(exactly = 0) {
                 container["tryStartHistory"](any<IEvent>())
-                container["startChildren"]()
+                container["startChildren"](any<IEvent>())
             }
         }
 

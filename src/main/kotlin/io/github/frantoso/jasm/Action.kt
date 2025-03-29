@@ -31,6 +31,7 @@ class Action(
 ) : IAction {
     /**
      * Fires the action.
+     * @param event The event which originally started the process which results in this action.
      */
     override fun fire(event: IEvent) =
         try {
@@ -42,6 +43,7 @@ class Action(
 
 /**
  * Encapsulates an action with a parameter of a state.
+ * @param T The data type of the action's parameter.
  * @param action The function to execute.
  * @param dataType The type of the parameters' data.
  */
@@ -63,7 +65,7 @@ class DataAction<T : Any>(
 
     /**
      * Fires the action.
-     * @param event The event which originally started the process which results in theis action.
+     * @param event The event which originally started the process which results in this action.
      */
     override fun fire(event: IEvent) {
         val dataEvent = event as? DataEvent<*>

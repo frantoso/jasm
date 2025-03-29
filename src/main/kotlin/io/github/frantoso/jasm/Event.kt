@@ -13,8 +13,7 @@ interface IEvent {
 }
 
 /**
- * Class representing an event.
- * Anonymous objects without a name provided will throw an exception.
+ * A class representing an event.
  */
 abstract class Event : IEvent {
     /**
@@ -43,17 +42,17 @@ abstract class Event : IEvent {
  */
 class DataEvent<T : Any>(
     val data: T,
-    private val triggerType: KClass<out IEvent>,
+    private val eventType: KClass<out IEvent>,
 ) : IEvent {
     /**
      * Gets the type of the encapsulated event.
      */
-    override val type: KClass<*> get() = triggerType
+    override val type: KClass<*> get() = eventType
 
     /**
      * Returns a string representation of the event - it's name.
      */
-    override fun toString(): String = triggerType.simpleName ?: "Event"
+    override fun toString(): String = eventType.simpleName ?: "Event"
 
     /**
      * Assigns the enclosed data to a new event type.

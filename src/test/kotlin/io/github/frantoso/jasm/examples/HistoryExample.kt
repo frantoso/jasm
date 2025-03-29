@@ -204,32 +204,32 @@ class HistoryExample {
         main.trigger(Events.Next)
         main.trigger(Events.Next)
 
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Preparing)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(l2Preparing.stateL3P3)
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Preparing)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(l2Preparing.stateL3P3)
         assertThat(l2Working.machine.isRunning).isFalse
 
         main.trigger(Events.Break)
 
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateHandlingError)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Preparing)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(l2Preparing.stateL3P3)
+        assertThat(main.machine.currentState).isEqualTo(main.stateHandlingError)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Preparing)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(l2Preparing.stateL3P3)
         assertThat(l2Working.machine.isRunning).isFalse
 
         main.trigger(Events.Continue)
 
         // restore Working, but start L2Preparing from the beginning
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Preparing)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(l2Preparing.stateL3P1)
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Preparing)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(l2Preparing.stateL3P1)
         assertThat(l2Working.machine.isRunning).isFalse
 
         main.trigger(Events.Next)
 
         // normal continuation
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Preparing)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(l2Preparing.stateL3P2)
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Preparing)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(l2Preparing.stateL3P2)
         assertThat(l2Working.machine.isRunning).isFalse
     }
 
@@ -251,37 +251,37 @@ class HistoryExample {
         main.trigger(Events.Next)
         main.trigger(Events.Next)
 
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Working)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(FinalState())
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Working)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(FinalState())
         assertThat(l2Preparing.machine.isRunning).isFalse
-        assertThat(l2Working.machine.currentState.state).isEqualTo(l2Working.stateL3W3)
+        assertThat(l2Working.machine.currentState).isEqualTo(l2Working.stateL3W3)
 
         main.trigger(Events.Break)
 
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateHandlingError)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Working)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(FinalState())
+        assertThat(main.machine.currentState).isEqualTo(main.stateHandlingError)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Working)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(FinalState())
         assertThat(l2Preparing.machine.isRunning).isFalse
-        assertThat(l2Working.machine.currentState.state).isEqualTo(l2Working.stateL3W3)
+        assertThat(l2Working.machine.currentState).isEqualTo(l2Working.stateL3W3)
 
         main.trigger(Events.ContinueDeep)
 
         // restore the states of the whole hierarchy
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Working)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(FinalState())
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Working)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(FinalState())
         assertThat(l2Preparing.machine.isRunning).isFalse
-        assertThat(l2Working.machine.currentState.state).isEqualTo(l2Working.stateL3W3)
+        assertThat(l2Working.machine.currentState).isEqualTo(l2Working.stateL3W3)
 
         main.trigger(Events.Next)
 
         // normal continuation
-        assertThat(main.machine.currentState.state).isEqualTo(main.stateWorking)
-        assertThat(working.machine.currentState.state).isEqualTo(working.stateL2Working)
-        assertThat(l2Preparing.machine.currentState.state).isEqualTo(FinalState())
+        assertThat(main.machine.currentState).isEqualTo(main.stateWorking)
+        assertThat(working.machine.currentState).isEqualTo(working.stateL2Working)
+        assertThat(l2Preparing.machine.currentState).isEqualTo(FinalState())
         assertThat(l2Preparing.machine.isRunning).isFalse
-        assertThat(l2Working.machine.currentState.state).isEqualTo(l2Working.stateL3W4)
+        assertThat(l2Working.machine.currentState).isEqualTo(l2Working.stateL3W4)
     }
 
     @Test
