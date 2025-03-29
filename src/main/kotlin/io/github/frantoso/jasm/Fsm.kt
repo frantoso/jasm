@@ -22,14 +22,14 @@ import kotlin.coroutines.CoroutineContext
 abstract class Fsm(
     val name: String,
     private val onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
-    private val onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    private val onTriggered: ((sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit),
     startState: StateContainerBase<out EndState>,
     otherStates: List<StateContainerBase<out IState>>,
 ) {
     /**
      * Gets the initial state.
      */
-    private val initial: InitialStateContainer = InitialState().use().transition(startState.state)
+    private val initial: InitialStateContainer = InitialState().with().transition(startState.state)
 
     /**
      * The start state in a list for later use.
@@ -49,7 +49,7 @@ abstract class Fsm(
         if ((otherStates + startStateAsList).flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
             emptyList()
         } else {
-            listOf(FinalState().use())
+            listOf(FinalState().with())
         }
 
     /**
@@ -68,7 +68,7 @@ abstract class Fsm(
                 }.distinct()
                 .filterIsInstance<State>()
                 .filterNot { state -> knownStates.map { it.state }.contains(state) }
-                .map { it.use() }
+                .map { it.with() }
                 .toList()
         }
 
@@ -76,7 +76,7 @@ abstract class Fsm(
         val isNoEventMisused =
             states
                 .flatMap { state -> state.debugInterface.transitionDump.map { state to it } }
-                .any { !it.first.hasChildren && (it.second::class == NoEvent::class || it.second::class == DataNoEvent::class) }
+                .any { !it.first.hasChildren && (it.second.eventType == NoEvent::class) }
 
         if (isNoEventMisused) {
             throw FsmException("A transition without event can only be used for nested states!")
@@ -110,6 +110,30 @@ abstract class Fsm(
     }
 
     /**
+     * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user defined state.
+     * This method calls the initial states OnEntry method.
+     * @param T The type of the data parameter.
+     * @param data The data to provide to the function.
+     */
+    fun <T : Any> start(data: T) {
+        currentState = initial
+        triggerEvent(DataEvent(data, StartEvent::class))
+        onStart()
+    }
+
+    /**
+     * Fires the parametrised Do event of the current state.
+     * @param T The type of the data parameter.
+     * @param data The data to provide to the function.
+     */
+    fun <T : Any> doAction(data: T) = currentState.onDoInState.fire(DataEvent(data, NoEvent::class))
+
+    /**
+     * Fires the Do event of the current state.
+     */
+    fun doAction() = currentState.onDoInState.fire(NoEvent)
+
+    /**
      * Called when the FSM starts. Allows a derived class to execute additional startup code.
      */
     protected open fun onStart() {
@@ -127,7 +151,7 @@ abstract class Fsm(
      * @return Returns true if the event was handled; false otherwise. In case of
      * asynchronous processing it returns null.
      */
-    abstract fun trigger(trigger: Event): Boolean
+    abstract fun trigger(trigger: IEvent): Boolean
 
     /**
      * Triggers a transition.
@@ -136,7 +160,7 @@ abstract class Fsm(
      * @return Returns true if the event was handled; false otherwise. In case of
      * asynchronous processing it returns null.
      */
-    protected fun triggerEvent(trigger: Event): Boolean {
+    protected fun triggerEvent(trigger: IEvent): Boolean {
         synchronized(this) {
             checkParameter(trigger)
 
@@ -154,7 +178,7 @@ abstract class Fsm(
      * @param changeStateData The data needed to activate the next state.
      */
     private fun activateState(
-        trigger: Event,
+        trigger: IEvent,
         changeStateData: ChangeStateData,
     ) {
         if (changeStateData.endPoint == null) {
@@ -199,7 +223,7 @@ abstract class Fsm(
      * @param handled A value indicating whether the event was handled (true) or not (false).
      */
     private fun raiseTriggered(
-        event: Event,
+        event: IEvent,
         handled: Boolean,
     ) {
         try {
@@ -279,8 +303,8 @@ abstract class Fsm(
          *
          * @param trigger The event parameter to check.
          */
-        internal fun checkParameter(trigger: Event) {
-            if (trigger::class == NoEvent::class || trigger::class == DataNoEvent::class) {
+        internal fun checkParameter(trigger: IEvent) {
+            if (trigger::class == NoEvent::class) {
                 throw FsmException("Fsm.trigger: A trigger event cannot be NoEvent!")
             }
         }
@@ -302,7 +326,7 @@ abstract class Fsm(
 class FsmSync(
     name: String,
     onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit),
     startState: StateContainerBase<out EndState>,
     otherStates: List<StateContainerBase<out IState>>,
 ) : Fsm(name, onStateChanged, onTriggered, startState, otherStates) {
@@ -312,7 +336,12 @@ class FsmSync(
      * @param trigger The event occurred.
      * @return Returns true if the event was handled; false otherwise.
      */
-    override fun trigger(trigger: Event): Boolean = triggerEvent(trigger)
+    override fun trigger(trigger: IEvent): Boolean = triggerEvent(trigger)
+
+    fun <T : Any> trigger(
+        event: Event,
+        data: T,
+    ): Boolean = trigger(DataEvent(data, event::class))
 }
 
 /**
@@ -330,7 +359,7 @@ class FsmSync(
 class FsmAsync(
     name: String,
     onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit),
     startState: StateContainerBase<out EndState>,
     otherStates: List<StateContainerBase<out IState>>,
     override val coroutineContext: CoroutineContext = CoroutineScope(Dispatchers.Default.limitedParallelism(1)).coroutineContext,
@@ -357,7 +386,7 @@ class FsmAsync(
      * @param trigger The event occurred.
      * @return Returns true.
      */
-    override fun trigger(trigger: Event): Boolean {
+    override fun trigger(trigger: IEvent): Boolean {
         this.launch {
             mutex.withLock {
                 triggerEvent(trigger)
@@ -366,6 +395,11 @@ class FsmAsync(
 
         return true
     }
+
+    fun <T : Any> trigger(
+        event: Event,
+        data: T,
+    ): Boolean = trigger(DataEvent(data, event::class))
 }
 
 /**
@@ -393,7 +427,7 @@ fun fsmOf(
 fun fsmOf(
     name: String,
     onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit),
     startState: StateContainerBase<out EndState>,
     vararg otherStates: StateContainerBase<out IState>,
 ): FsmSync = FsmSync(name, onStateChanged, onTriggered, startState, otherStates.toList())
@@ -438,7 +472,7 @@ fun fsmAsyncOf(
 fun fsmAsyncOf(
     name: String,
     onStateChanged: ((sender: Fsm, from: IState, to: IState) -> Unit),
-    onTriggered: ((sender: Fsm, currentState: IState, event: Event, handled: Boolean) -> Unit),
+    onTriggered: ((sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit),
     startState: StateContainerBase<out EndState>,
     vararg otherStates: StateContainerBase<out IState>,
 ): FsmAsync = FsmAsync(name, onStateChanged, onTriggered, startState, otherStates.toList())

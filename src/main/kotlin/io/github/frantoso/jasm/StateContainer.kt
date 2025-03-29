@@ -10,6 +10,7 @@ import java.util.Collections
  * @param transitions Gets a list storing the transition information.
  * @param onEntry Gets the handler method for the states entry action.
  * @param onExit Gets the handler method for the states exit action.
+ * @param onDoInState Gets the handler method for the states do in state action.
  */
 abstract class StateContainerBase<TState : IState>(
     val state: TState,
@@ -17,6 +18,7 @@ abstract class StateContainerBase<TState : IState>(
     val transitions: List<ITransition>,
     val onEntry: IAction,
     val onExit: IAction,
+    val onDoInState: IAction,
 ) {
     /**
      * The list of currently working child state machines.
@@ -47,12 +49,14 @@ abstract class StateContainerBase<TState : IState>(
     /**
      * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
      */
-    fun start() = start(NoEvent(), History.None)
+    fun start() = start(NoEvent, History.None)
 
     /**
      * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
+     * @param T The data type of the data to provide to the entry function.
+     * @param data The data to provide to the entry function.
      */
-    fun <T : Any> start(data: T) = start(DataNoEvent(data), History.None)
+    fun <T : Any> start(data: T) = start(DataEvent(data, NoEvent::class), History.None)
 
     /**
      * Calls the OnEntry handler of this state and starts all child FSMs if there are some.
@@ -60,7 +64,7 @@ abstract class StateContainerBase<TState : IState>(
      * @param history The kind of history to use.
      */
     fun start(
-        trigger: Event,
+        trigger: IEvent,
         history: History,
     ) {
         if (history.isHistory) {
@@ -81,7 +85,7 @@ abstract class StateContainerBase<TState : IState>(
      * Let all direct child FSMs continue working. Calls start() if there is no active child.
      * @return Returns a value indicating whether the start was successful.
      */
-    private fun tryStartHistory(trigger: Event): Boolean {
+    private fun tryStartHistory(trigger: IEvent): Boolean {
         if (!hasActiveChildren) {
             return false
         }
@@ -102,7 +106,7 @@ abstract class StateContainerBase<TState : IState>(
      * @param trigger The event occurred.
      * @return Returns the data needed to proceed with the new state.
      */
-    internal fun trigger(trigger: Event): ChangeStateData {
+    internal fun trigger(trigger: IEvent): ChangeStateData {
         val result = processChildren(trigger)
 
         return if (result.first) ChangeStateData(true) else processTransitions(result.second)
@@ -131,7 +135,7 @@ abstract class StateContainerBase<TState : IState>(
      * @param trigger The event occurred.
      * @return Returns the data needed to proceed with the new state.
      */
-    private fun processTransitions(trigger: Event): ChangeStateData {
+    private fun processTransitions(trigger: IEvent): ChangeStateData {
         for (transition in transitions.filter { it.isAllowed(trigger) }) {
             return changeState(trigger, transition)
         }
@@ -148,7 +152,7 @@ abstract class StateContainerBase<TState : IState>(
      *      If the last child machine went to the final state, the returned result is false (Pair.first) and
      *      the returned trigger is FsmEvent.NoEvent (Pair.second).
      */
-    private fun processChildren(trigger: Event): Pair<Boolean, Event> {
+    private fun processChildren(trigger: IEvent): Pair<Boolean, IEvent> {
         if (!hasActiveChildren) {
             return Pair(false, trigger)
         }
@@ -158,8 +162,13 @@ abstract class StateContainerBase<TState : IState>(
             return Pair(true, trigger)
         }
 
-        return Pair(false, if (hasActiveChildren) trigger else NoEvent())
+        return Pair(false, if (hasActiveChildren) trigger else toNoEvent(trigger))
     }
+
+    /**
+     * Checks the trigger for data and converts it to a NoEvent instance.
+     */
+    private fun toNoEvent(trigger: IEvent): IEvent = (trigger as? DataEvent<*>)?.fromData(NoEvent::class) ?: NoEvent
 
     /**
      * Changes the state to the one stored in the transition object.
@@ -167,7 +176,7 @@ abstract class StateContainerBase<TState : IState>(
      * @return Returns the data needed to proceed with the new state.
      */
     private fun changeState(
-        trigger: Event,
+        trigger: IEvent,
         transition: ITransition,
     ): ChangeStateData {
         onExit.fire(trigger)
@@ -179,7 +188,7 @@ abstract class StateContainerBase<TState : IState>(
      * @param trigger The event occurred.
      * @return Returns true if the event was handled; false otherwise.
      */
-    private fun triggerChildren(trigger: Event): Boolean = activeChildren.toList().map { triggerChild(it, trigger) }.any { it }
+    private fun triggerChildren(trigger: IEvent): Boolean = activeChildren.toList().map { triggerChild(it, trigger) }.any { it }
 
     /**
      * Triggers the specified child machine.
@@ -189,7 +198,7 @@ abstract class StateContainerBase<TState : IState>(
      */
     private fun triggerChild(
         child: FsmSync,
-        trigger: Event,
+        trigger: IEvent,
     ): Boolean {
         val handled = child.trigger(trigger)
 
@@ -240,6 +249,7 @@ abstract class StateContainerBase<TState : IState>(
  * @param transitions Gets a list storing the transition information.
  * @param onEntry Gets the handler method for the states entry action.
  * @param onExit Gets the handler method for the states exit action.
+ * @param onDoInState Gets the handler method for the states do in state action.
  */
 class StateContainer(
     state: State,
@@ -247,7 +257,8 @@ class StateContainer(
     transitions: List<ITransition>,
     onEntry: IAction,
     onExit: IAction,
-) : StateContainerBase<State>(state, children, transitions, onEntry, onExit) {
+    onDoInState: IAction,
+) : StateContainerBase<State>(state, children, transitions, onEntry, onExit, onDoInState) {
     /**
      * Adds a new child machine.
      * @param stateMachine The child machine to add.
@@ -260,6 +271,7 @@ class StateContainer(
             transitions = transitions,
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
@@ -274,6 +286,7 @@ class StateContainer(
             transitions = transitions,
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
@@ -288,7 +301,23 @@ class StateContainer(
             transitions = transitions,
             onEntry = action,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
+
+    /**
+     * Sets the handler method for the states entry action.
+     * @param T The type of the action's parameter.
+     * @param action The handler method for the states entry action.
+     * @return Returns a new state container.
+     */
+    inline fun <reified T : Any> entry(noinline action: (T?) -> Unit): StateContainer = entry(DataAction(T::class, action))
+
+    /**
+     * Sets the handler method for the states entry action.
+     * @param action The handler method for the states entry action.
+     * @return Returns a new state container.
+     */
+    fun entry(action: () -> Unit): StateContainer = entry(Action(action))
 
     /**
      * Sets the handler method for the states exit action.
@@ -302,11 +331,51 @@ class StateContainer(
             transitions = transitions,
             onEntry = onEntry,
             onExit = action,
+            onDoInState = onDoInState,
         )
 
     /**
+     * Sets the handler method for the states exit action.
+     * @param T The type of the action's parameter.
+     * @param action The handler method for the states entry action.
+     * @return Returns a new state container.
+     */
+    inline fun <reified T : Any> exit(noinline action: (T?) -> Unit): StateContainer = exit(DataAction(T::class, action))
+
+    /**
+     * Sets the handler method for the states exit action.
+     * @param action The handler method for the states entry action.
+     * @return Returns a new state container.
+     */
+    fun exit(action: () -> Unit): StateContainer = exit(Action(action))
+
+    /**
+     * Sets the handler method for the states do in state action.
+     * @param action The handler method for the states exit action.
+     * @return Returns a new state container.
+     */
+    fun doInState(action: IAction): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions,
+            onEntry = onEntry,
+            onExit = onExit,
+            onDoInState = action,
+        )
+
+    /**
+     * Sets the handler method for the states do in state action.
+     * @param action The handler method for the states exit action.
+     * @return Returns a new state container.
+     */
+    inline fun <reified T : Any> doInState(noinline action: (T?) -> Unit): StateContainer = doInState(DataAction(T::class, action))
+
+    fun doInState(action: () -> Unit): StateContainer = doInState(Action(action))
+
+    /**
      * Adds a new transition to the state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param stateTo A reference to the end point of this transition.
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
@@ -318,28 +387,30 @@ class StateContainer(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E>(stateTo, guard),
+            transitions = transitions + Transition(E::class, stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
      * Adds a new transition to the state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param stateTo A reference to the end point of this transition.
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    inline fun <reified E : DataEvent<T>, reified T : Any> transition(
+    inline fun <reified E : Event, reified T : Any> transition(
         stateTo: EndState,
         noinline guard: (T?) -> Boolean = { true },
     ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E, T>(stateTo, guard),
+            transitions = transitions + DataTransition(E::class, T::class, stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
@@ -348,21 +419,41 @@ class StateContainer(
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    inline fun <reified T : Any> transitionT(
+    fun transitionWithoutEvent(
+        stateTo: EndState,
+        guard: () -> Boolean = { true },
+    ): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions + Transition(NoEvent::class, stateTo, guard),
+            onEntry = onEntry,
+            onExit = onExit,
+            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * @param stateTo A reference to the end point of this transition.
+     * @param guard Condition handler of this transition.
+     * @return Returns a new state container.
+     */
+    inline fun <reified T : Any> transitionWithoutEvent(
         stateTo: EndState,
         noinline guard: (T?) -> Boolean = { true },
     ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<DataNoEvent<T>, T>(stateTo, guard),
+            transitions = transitions + DataTransition(NoEvent::class, T::class, stateTo, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
      * Adds a new transition to the state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param guard Condition handler of this transition.
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
@@ -374,28 +465,30 @@ class StateContainer(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E>(endPoint, guard),
+            transitions = transitions + Transition(E::class, endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
      * Adds a new transition to the state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param guard Condition handler of this transition.
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    inline fun <reified E : DataEvent<T>, reified T : Any> transition(
+    inline fun <reified E : Event, reified T : Any> transition(
         endPoint: TransitionEndPoint,
         noinline guard: (T?) -> Boolean = { true },
     ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E, T>(endPoint, guard),
+            transitions = transitions + DataTransition(E::class, T::class, endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
@@ -404,36 +497,57 @@ class StateContainer(
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
      */
-    inline fun <reified T : Any> transitionT(
+    fun transitionWithoutEvent(
+        endPoint: TransitionEndPoint,
+        guard: () -> Boolean = { true },
+    ): StateContainer =
+        StateContainer(
+            state = state,
+            children = children,
+            transitions = transitions + Transition(NoEvent::class, endPoint, guard),
+            onEntry = onEntry,
+            onExit = onExit,
+            onDoInState = onDoInState,
+        )
+
+    /**
+     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * @param guard Condition handler of this transition.
+     * @param endPoint A reference to the end point of this transition.
+     * @return Returns a new state container.
+     */
+    inline fun <reified T : Any> transitionWithoutEvent(
         endPoint: TransitionEndPoint,
         noinline guard: (T?) -> Boolean = { true },
     ): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<DataNoEvent<T>, T>(endPoint, guard),
+            transitions = transitions + DataTransition(NoEvent::class, T::class, endPoint, guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
      * Adds a new transition to the final state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
-    inline fun <reified E : DataEvent<T>, reified T : Any> transitionToFinal(noinline guard: (T?) -> Boolean = { true }): StateContainer =
+    inline fun <reified E : Event, reified T : Any> transitionToFinal(noinline guard: (T?) -> Boolean = { true }): StateContainer =
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E, T>(FinalState(), guard),
+            transitions = transitions + DataTransition(E::class, T::class, FinalState(), guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 
     /**
      * Adds a new transition to the final state.
-     * @param trigger The Event that initiates this transition.
+     * @param E The Event that initiates this transition.
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
      */
@@ -441,9 +555,10 @@ class StateContainer(
         StateContainer(
             state = state,
             children = children,
-            transitions = transitions + transitionX<E>(FinalState(), guard),
+            transitions = transitions + Transition(E::class, FinalState(), guard),
             onEntry = onEntry,
             onExit = onExit,
+            onDoInState = onDoInState,
         )
 }
 
@@ -455,7 +570,7 @@ class StateContainer(
 class InitialStateContainer(
     state: InitialState,
     transitions: List<ITransition>,
-) : StateContainerBase<InitialState>(state, emptyList(), transitions, NoAction, NoAction) {
+) : StateContainerBase<InitialState>(state, emptyList(), transitions, NoAction, NoAction, NoAction) {
     /**
      * Adds a new transition to the state.
      * @param stateTo A reference to the end point of this transition.
@@ -464,7 +579,7 @@ class InitialStateContainer(
     fun transition(stateTo: EndState): InitialStateContainer =
         InitialStateContainer(
             state = state,
-            transitions = listOf(transitionX<StartEvent>(stateTo) { true }),
+            transitions = listOf(Transition(StartEvent::class, stateTo) { true }),
         )
 }
 
@@ -474,26 +589,27 @@ class InitialStateContainer(
  */
 class FinalStateContainer(
     state: FinalState,
-) : StateContainerBase<FinalState>(state, emptyList(), emptyList(), NoAction, NoAction)
+) : StateContainerBase<FinalState>(state, emptyList(), emptyList(), NoAction, NoAction, NoAction)
 
 /**
  * Encapsulates a normal state in a container.
  */
-fun State.use(): StateContainer =
+fun State.with(): StateContainer =
     StateContainer(
         state = this,
         children = emptyList(),
         transitions = emptyList(),
         onEntry = NoAction,
         onExit = NoAction,
+        onDoInState = NoAction,
     )
 
 /**
  * Encapsulates a final state in a container.
  */
-fun FinalState.use(): FinalStateContainer = FinalStateContainer(state = this)
+fun FinalState.with(): FinalStateContainer = FinalStateContainer(state = this)
 
 /**
  * Encapsulates an initial state in a container.
  */
-fun InitialState.use(): InitialStateContainer = InitialStateContainer(state = this, transitions = emptyList())
+fun InitialState.with(): InitialStateContainer = InitialStateContainer(state = this, transitions = emptyList())

@@ -6,7 +6,7 @@ This is an easy-to-use state machine implementation for Kotlin.
 
 There are a lot of variants known to implement state machines.
 Most of them merge the code of the state machines behavior together with the functional code.
-A better solution is to strictly separate the code for the state machines logic from
+A better solution is to strictly separate the code of the state machines logic from
 the functional code. An existing state machine component is parametrized to define its behavior.
 
 This readme includes the documentation of an implementation of a ready to use FSM (Finite State Machine).
@@ -15,10 +15,11 @@ Using this state machine is very simple. Just define the states, the transitions
 ## Basic steps to create a State Machine
 
 1. Model your state machine inside a graphical editor e.g. UML tool or any other applicable graphic tool.
-2. Create an instance of the FSM class in your code.
-3. Transfer all your transitions from the graphic to the code.
-4. Register the action handlers for your states.
-5. Start the state machine.
+2. Create all states in your code.
+3. Create the state machine from the states.
+4. Transfer all your transitions from the graphic to the code.
+5. Register the action handlers for your states.
+6. Start the state machine.
 
 ## How to ...
 
@@ -46,18 +47,17 @@ dependencies {
 ## How to: Create a simple State Machine
 
 This topic shows how to implement a simple Finite State Machine using the StateMachine component.
-The example shows the modelling of a single traffic light.                    
+The example shows the modelling of a single traffic light.
 
 ### Start with the model of the state machine
 
-![Simple state machine](images/traffic_light_simple.svg)  
+![Simple state machine](images/traffic_light_simple.svg)
+
 *A simple traffic light with four states, starting with showing the red light.*
 
 ### Create the state machine and the states
 
 ```kotlin
-// create the state machine
-
 // create the states...
 val showingRed = State("ShowingRed")
 val showingRedYellow = State("ShowingRedYellow")
@@ -70,88 +70,72 @@ val fsm =
     "simple traffic light",
     // define initial state with transitions and other parameters...
     showingRed
-      .with<Int>() // associate the event data type with the state
-      .entry { println("x--  $it") } // add an entry function
-      .transition(Tick, showingRedYellow), // add one or more transitions
+      .with() // prepare the state for usage
+      .entry { println("x--") } // add an entry function
+      .transition<Tick>(showingRedYellow), // add one or more transitions
     // define other states with transitions and other parameters...
     showingRedYellow
-      .with<Int>()
-      .entry { println("xx-  $it") }
-      .transition(Tick, showingGreen),
+      .with()
+      .entry { println("xx-") }
+      .transition<Tick>(showingGreen),
     showingGreen
-      .with<Int>()
-      .entry { println("--x  $it") }
-      .transition(Tick, showingYellow),
+      .with()
+      .entry { println("--x") }
+      .transition<Tick>(showingYellow),
     showingYellow
-      .with<Int>()
-      .entry { println("-x-  $it") }
-      .transition(Tick, showingRed),
+      .with()
+      .entry { println("-x-") }
+      .transition<Tick>(showingRed),
   )
 
 // start the state machine
-fsm.start(1)
+fsm.start()
 
 assertThat(fsm.isRunning).isTrue
 
 // trigger an event
-fsm.trigger(Tick, 1)
+fsm.trigger(Tick)
 
 assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
 ```
 
 ## The classes
 
-### FsmSync<T>
+### FsmSync
 
-A synchronous (blocking) state machine. The call to trigger is blocking. 
-
-The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
-A value of this type must be provided at the call of start() or trigger().
+A synchronous (blocking) state machine. The call to trigger is blocking.
 
 ```kotlin
-data class MyFsmData(
-  val x: Int,
-  val y: String,
-)
-
 val state = State("MyState")
 val fsm =
   fsmOf(
     "MyFsm",
     // add at minimum one state
     state
-      .with<MyFsmData>()
-      .transitionToFinal(Tick),
+      .with()
+      .transitionToFinal<Tick>(),
   )
 
-fsm.start(MyFsmData(42, "test"))
+fsm.start()
 ```
 
-### FsmAsync<T>
+### FsmAsync
 
-An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
+An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are
 queued and triggered sequentially.
 
-The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
-A value of this type must be provided at the call of start() or trigger().
-
 ```kotlin
-data class MyFsmData(
-  val x: Int,
-  val y: String,
-)
-
 val state = State("MyState")
 val fsm =
   fsmAsyncOf(
     "MyFsm",
     // add at minimum one state
     state
-      .with<MyFsmData>()
-      .transitionToFinal(Tick),
+      .with()
+      .transitionToFinal<Tick>(),
   )
 
-fsm.start(MyFsmData(1, "2"))
+fsm.start()
 ```
 
 ## Synchronous vs Asynchronous
@@ -167,53 +151,58 @@ Following example shows the difference. The code is identically, only the type o
  different.
 
 ```kotlin
+object Event1 : Event()
+
+object Event2 : Event()
+```
+
+```kotlin
 val output = mutableListOf<String>()
-val event1 = object : Event() {}
-val event2 = object : Event() {}
 val state1 = State("first")
 val state2 = State("second")
 
-fun createFsmSync(): FsmSync<Int> =
+fun createFsmSync(): FsmSync =
   fsmOf(
     "MySyncFsm",
     state1
-      .with<Int>()
-      .transition(event1, state2)
-      .entry {
+      .with()
+      .transition<Event1>(state2)
+      .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .with<Int>()
-      .transition(event1, state2)
-      .entry {
+      .with()
+      .transition<Event1>(state2)
+      .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
-      }.transitionToFinal(event2),
+      }.transitionToFinal<Event2>(),
   )
 
-fun createFsmAsync(): FsmAsync<Int> =
+fun createFsmAsync(): FsmAsync =
   fsmAsyncOf(
     "MyAsyncFsm",
     state1
-      .with<Int>()
-      .transition(event1, state2)
-      .entry {
+      .with()
+      .transition<Event1>(state2)
+      .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .with<Int>()
-      .transition(event1, state2)
-      .entry {
+      .with()
+      .transition<Event1>(state2)
+      .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
-      }.transitionToFinal(event2),
+      }.transitionToFinal<Event2>(),
   )
 
-fun runFsm(fsm: Fsm<Int>): List<String> {
+fun runFsm(fsm: Fsm): List<String> {
   output.clear()
-  fsm.start(1)
+
+  fsm.start(42)
 
   runBlocking {
     launch {
@@ -225,17 +214,17 @@ fun runFsm(fsm: Fsm<Int>): List<String> {
     launch {
       (0..5).forEach {
         output.addLast("+ $it")
-        fsm.trigger(event1, it)
+        fsm.trigger(dataEvent<Event1, Int>(it))
         delay(10)
       }
 
-      fsm.trigger(event2, -1)
+      fsm.trigger(dataEvent<Event2, Int>(-1))
     }
 
     launch {
       (10..15).forEach {
         output.addLast("+ $it")
-        fsm.trigger(event1, it)
+        fsm.trigger(dataEvent<Event1, Int>(it))
         delay(1)
       }
     }
@@ -260,7 +249,7 @@ The output produced by both calls to `runFsm()`:
 
 | synchronous | asynchronous |
 |:-----------:|:------------:|
-|     - 1     |     - 1      |
+|    - 42     |    - 42      |
 |     + 0     |     + 0      |
 |     - 0     |     - 0      |
 |    + 10     |     + 10     |

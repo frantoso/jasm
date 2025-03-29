@@ -1,27 +1,34 @@
 package io.github.frantoso.jasm
 
+import kotlin.reflect.KClass
+
+/**
+ * An interface all events must provide.
+ */
+interface IEvent {
+    /**
+     * When overridden, gets the type of the event.
+     */
+    val type: KClass<*>
+}
+
 /**
  * Class representing an event.
- * @param name The name of this event. If there is no name provided, the name of the class is used.
  * Anonymous objects without a name provided will throw an exception.
  */
-abstract class Event(
-    name: String = "",
-) {
+abstract class Event : IEvent {
     /**
-     * Gets the name of this event.
-     * Anonymous objects without a name provided will throw an exception.
+     * Gets the type of the event.
      */
-    val name: String = name.ifBlank { this::class.simpleName!! }
+    override val type: KClass<*> get() = this::class
 
     /**
      * Returns a string representation of the event - it's name.
      */
-    override fun toString(): String = name
+    override fun toString(): String = this::class.simpleName ?: "Event"
 
     /**
      * Returns a value indicating whether this instance is equal to [other].
-     * Special handling for the final state class: The object itself is not relevant, only the type.
      */
     override fun equals(other: Any?): Boolean = other != null && this::class == other::class
 
@@ -31,23 +38,38 @@ abstract class Event(
     override fun hashCode(): Int = javaClass.hashCode()
 }
 
-abstract class DataEvent<T : Any>(
-    name: String = "",
-) : Event(name) {
-    abstract val data: T
+/**
+ * A container to bundle an event with data.
+ */
+class DataEvent<T : Any>(
+    val data: T,
+    private val triggerType: KClass<out IEvent>,
+) : IEvent {
+    /**
+     * Gets the type of the encapsulated event.
+     */
+    override val type: KClass<*> get() = triggerType
+
+    /**
+     * Returns a string representation of the event - it's name.
+     */
+    override fun toString(): String = triggerType.simpleName ?: "Event"
+
+    /**
+     * Assigns the enclosed data to a new event type.
+     */
+    fun fromData(newType: KClass<out IEvent>): DataEvent<T> = DataEvent(data, newType)
 }
 
 /**
- * Gets the constant used to specify that no event is necessary.
+ * A helper function to create a DataEvent from an Event and data.
  */
-class NoEvent : Event()
+inline fun <reified E : Event, T : Any> dataEvent(data: T): DataEvent<T> = DataEvent(data, E::class)
 
 /**
  * Gets the constant used to specify that no event is necessary.
  */
-class DataNoEvent<T : Any>(
-    override val data: T,
-) : DataEvent<T>()
+object NoEvent : Event()
 
 /**
  * Gets the Event used to start the behavior of an FSM.

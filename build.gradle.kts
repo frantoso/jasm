@@ -2,7 +2,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     java
-    kotlin("jvm") version "2.1.0"
+    kotlin("jvm") version "2.1.20"
     id("com.vanniktech.maven.publish") version "0.30.0"
     id("org.jmailen.kotlinter") version "5.0.1"
     id("org.jetbrains.kotlinx.kover") version "0.9.1"
@@ -12,6 +12,7 @@ plugins {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.20")
     testImplementation(kotlin("test"))
     testImplementation("org.assertj:assertj-core:3.25.1")
     testImplementation("io.mockk:mockk:1.13.11")

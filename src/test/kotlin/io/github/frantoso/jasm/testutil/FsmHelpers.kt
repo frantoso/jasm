@@ -1,22 +1,22 @@
 package io.github.frantoso.jasm.testutil
 
 import io.github.frantoso.jasm.EndState
-import io.github.frantoso.jasm.Event
 import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.Fsm
+import io.github.frantoso.jasm.IEvent
 import io.github.frantoso.jasm.State
 import org.assertj.core.api.Assertions.assertThat
 
-class TestData<T>(
+class TestData(
     val startState: State,
-    val event: Event,
+    val event: IEvent,
     val endState: EndState,
     val wasHandled: Boolean,
 )
 
-fun <T> testStateChange(
+fun testStateChange(
     fsm: Fsm,
-    testData: List<TestData<T>>,
+    testData: List<TestData>,
 ) {
     val debugInterface = fsm.debugInterface
 
