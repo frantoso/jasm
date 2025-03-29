@@ -51,13 +51,13 @@ class HistoryExample {
                     .entry(::p4Entry),
             )
 
-        fun p1Entry(data: Any?) = println("P1Entry - $data")
+        fun p1Entry() = println("L3-P1Entry")
 
-        fun p2Entry(data: Any?) = println("P2Entry - $data")
+        fun p2Entry() = println("L3-P2Entry")
 
-        fun p3Entry(data: Any?) = println("P3Entry - $data")
+        fun p3Entry() = println("L3-P3Entry")
 
-        fun p4Entry(data: Any?) = println("P4Entry - $data")
+        fun p4Entry() = println("L3-P4Entry")
     }
 
     class L2Working {
@@ -92,15 +92,15 @@ class HistoryExample {
                     .entry(::w5Entry),
             )
 
-        private fun w5Entry(data: Any?) = println("W5Entry - $data")
+        private fun w5Entry() = println("L3-W5Entry")
 
-        private fun w4Entry(data: Any?) = println("W4Entry - $data")
+        private fun w4Entry() = println("L3-W4Entry")
 
-        private fun w3Entry(data: Any?) = println("W3Entry - $data")
+        private fun w3Entry() = println("L3W-3Entry")
 
-        private fun w2Entry(data: Any?) = println("W2Entry - $data")
+        private fun w2Entry() = println("L3W-2Entry")
 
-        private fun w1Entry(data: Any?) = println("W1Entry - $data")
+        private fun w1Entry() = println("L3W-1Entry")
     }
 
     class Working {
@@ -131,11 +131,11 @@ class HistoryExample {
                     .child(l2Working.machine),
             )
 
-        private fun l2InitializingEntry(data: Any?) = println("L2InitializingEntry - $data")
+        private fun l2InitializingEntry() = println("L2-InitializingEntry")
 
-        private fun l2PreparingEntry(data: Any?) = println("L2PreparingEntry - $data")
+        private fun l2PreparingEntry() = println("L2-PreparingEntry")
 
-        private fun l2WorkingEntry(data: Any?) = println("L2WorkingEntry - $data")
+        private fun l2WorkingEntry() = println("L2-WorkingEntry")
     }
 
     class Main {
@@ -183,11 +183,11 @@ class HistoryExample {
                     .entry(::finalizingEntry),
             )
 
-        private fun finalizingEntry(data: Any?) = println("FinalizingEntry - $data")
+        private fun finalizingEntry() = println("FinalizingEntry")
 
-        private fun handlingErrorEntry(data: Any?) = println("HandlingErrorEntry - $data")
+        private fun handlingErrorEntry() = println("HandlingErrorEntry")
 
-        private fun workingEntry(data: Any?) = println("WorkingEntry - $data")
+        private fun workingEntry() = println("WorkingEntry")
     }
 
     @Test
