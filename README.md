@@ -16,10 +16,9 @@ Using this state machine is very simple. Just define the states, the transitions
 
 1. Model your state machine inside a graphical editor e.g. UML tool or any other applicable graphic tool.
 2. Create all states in your code.
-3. Create the state machine from the states.
-4. Transfer all your transitions from the graphic to the code.
-5. Register the action handlers for your states.
-6. Start the state machine.
+3. Transfer all your transitions from the graphic to the code.
+4. Register the action handlers for your states.
+5. Start the state machine.
 
 ## How to ...
 
@@ -46,7 +45,7 @@ dependencies {
 
 ## How to: Create a simple State Machine
 
-This topic shows how to implement a simple Finite State Machine using the StateMachine component.
+This topic shows how to implement a simple Finite State Machine using the jasm component.
 The example shows the modelling of a single traffic light.
 
 ### Start with the model of the state machine
