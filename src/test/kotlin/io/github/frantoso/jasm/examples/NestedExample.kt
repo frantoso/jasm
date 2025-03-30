@@ -21,9 +21,9 @@ class NestedExample {
     private val parameters = Parameters()
 
     class TrafficLight {
-        val fsmMain: FsmSync<Parameters>
-        val fsmDay: FsmSync<Parameters>
-        val fsmNight: FsmSync<Parameters>
+        val fsmMain: FsmSync
+        val fsmDay: FsmSync
+        val fsmNight: FsmSync
 
         init {
             fsmDay = createFsmDayMode()
@@ -36,19 +36,19 @@ class NestedExample {
                 fsmOf(
                     "traffic light controller",
                     controllingDayMode
-                        .with<Parameters>()
-                        .entry { println("starting day mode    $it") }
-                        .transition(NoEvent, controllingNightMode)
+                        .with()
+                        .entry<Parameters> { println("starting day mode    $it") }
+                        .transition<NoEvent, Parameters>(controllingNightMode)
                         .child(fsmDay),
                     controllingNightMode
-                        .with<Parameters>()
-                        .entry { println("starting night mode    $it") }
-                        .transition(NoEvent, controllingDayMode)
+                        .with()
+                        .entry<Parameters> { println("starting night mode    $it") }
+                        .transition<NoEvent, Parameters>(controllingDayMode)
                         .child(fsmNight),
                 )
         }
 
-        private fun createFsmDayMode(): FsmSync<Parameters> {
+        private fun createFsmDayMode(): FsmSync {
             val showingRed = State("ShowingRed")
             val showingRedYellow = State("ShowingRedYellow")
             val showingYellow = State("ShowingYellow")
@@ -57,40 +57,40 @@ class NestedExample {
             return fsmOf(
                 "traffic light day mode",
                 showingRed
-                    .with<Parameters>()
-                    .entry { println("x--    $it") }
-                    .transition(Tick, showingRedYellow),
+                    .with()
+                    .entry<Parameters> { println("x--    $it") }
+                    .transition<Tick, Parameters>(showingRedYellow),
                 showingRedYellow
-                    .with<Parameters>()
-                    .entry { println("xx-    $it") }
-                    .transition(Tick, showingGreen),
+                    .with()
+                    .entry<Parameters> { println("xx-    $it") }
+                    .transition<Tick>(showingGreen),
                 showingGreen
-                    .with<Parameters>()
-                    .entry { println("--x    $it") }
-                    .transition(Tick, showingYellow),
+                    .with()
+                    .entry<Parameters> { println("--x    $it") }
+                    .transition<Tick>(showingYellow),
                 showingYellow
-                    .with<Parameters>()
-                    .entry { println("-x-    $it") }
-                    .transition(Tick, showingRed) { it.isDayMode }
-                    .transition(Tick, FinalState()) { !it.isDayMode },
+                    .with()
+                    .entry<Parameters> { println("-x-    $it") }
+                    .transition<Tick, Parameters>(showingRed) { it!!.isDayMode }
+                    .transition<Tick, Parameters>(FinalState()) { !it!!.isDayMode },
             )
         }
 
-        private fun createFsmNightMode(): FsmSync<Parameters> {
+        private fun createFsmNightMode(): FsmSync {
             val showingNothing = State("ShowingNothing")
             val showingYellow = State("ShowingYellow")
 
             return fsmOf(
                 "traffic light night mode",
                 showingYellow
-                    .with<Parameters>()
-                    .entry { println("x--    $it") }
-                    .transition(Tick, showingNothing) { !it.isDayMode }
-                    .transition(Tick, FinalState()) { it.isDayMode },
+                    .with()
+                    .entry<Parameters> { println("x--    $it") }
+                    .transition<Tick, Parameters>(showingNothing) { !it!!.isDayMode }
+                    .transition<Tick, Parameters>(FinalState()) { it!!.isDayMode },
                 showingNothing
-                    .with<Parameters>()
-                    .entry { println("xx-    $it") }
-                    .transition(Tick, showingYellow),
+                    .with()
+                    .entry<Parameters> { println("xx-    $it") }
+                    .transition<Tick>(showingYellow),
             )
         }
     }
@@ -99,7 +99,7 @@ class NestedExample {
     fun `steps through the states`() {
         val trafficLight = TrafficLight()
 
-        trafficLight.fsmMain.start(parameters)
+        trafficLight.fsmMain.start()
         assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingRed")
         assertThat(trafficLight.fsmDay.isRunning).isTrue
         assertThat(trafficLight.fsmNight.isRunning).isFalse
@@ -139,7 +139,7 @@ class NestedExample {
     fun `generates a graph from the state machine`() {
         val generator = MultipleDiagramGenerator(TrafficLight().fsmMain)
 
-        generator.toSvg("build/reports/traffic-light.svg")
-        generator.toPng("build/reports/traffic-light.png")
+        generator.toSvg("build/reports/traffic-light.svg", 1000)
+        generator.toPng("build/reports/traffic-light.png", 1000)
     }
 }

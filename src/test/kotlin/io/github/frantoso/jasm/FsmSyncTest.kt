@@ -14,24 +14,24 @@ import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 
 class FsmSyncTest {
+    private object Tick : Event()
+
     private object Event1 : Event()
 
     private object Event2 : Event()
 
     private lateinit var state1: State
     private lateinit var state2: State
-    private lateinit var stateContainer1: StateContainer<Int>
-    private lateinit var stateContainer2: StateContainer<Int>
-    private lateinit var fsm: FsmSync<Int>
-
-    private var doInStateResult = 0
+    private lateinit var stateContainer1: StateContainer
+    private lateinit var stateContainer2: StateContainer
+    private lateinit var fsm: FsmSync
 
     @BeforeEach
     fun createFsm() {
         state1 = State("first")
         state2 = State("second")
-        stateContainer1 = state1.with<Int>().transition(Event1, state2).doInState { i -> doInStateResult = i }
-        stateContainer2 = state2.with<Int>().transition(Event1, FinalState())
+        stateContainer1 = state1.with().transition<Event1>(state2)
+        stateContainer2 = state2.with().transition<Event1>(FinalState())
 
         fsm =
             FsmSync(
@@ -44,9 +44,9 @@ class FsmSyncTest {
     }
 
     private fun createSyncFsm(
-        onStateChanged: (sender: Fsm<Int>, from: IState, to: IState) -> Unit,
-        onTriggered: (sender: Fsm<Int>, currentState: IState, event: Event, handled: Boolean) -> Unit,
-    ): FsmSync<Int> {
+        onStateChanged: (sender: Fsm, from: IState, to: IState) -> Unit,
+        onTriggered: (sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit,
+    ): FsmSync {
         val state1 = State("first")
         val state2 = State("second")
 
@@ -55,17 +55,17 @@ class FsmSyncTest {
                 "myFsm",
                 onStateChanged,
                 onTriggered,
-                state1.with<Int>().transition(Event1, state2).entry {
+                state1.with().transition<Event1>(state2).entry<Int> {
                     println(it)
                     Thread.sleep(100)
                 },
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
-                    }.transition(Event2, FinalState()),
+                    }.transition<Event2>(FinalState()),
             )
         return fsm
     }
@@ -73,7 +73,7 @@ class FsmSyncTest {
     @Test
     fun `creates a new state machine`() {
         val fsm =
-            FsmSync<Int>(
+            FsmSync(
                 "myFsm",
                 { _, _, _ -> },
                 { _, _, _, _ -> },
@@ -82,8 +82,8 @@ class FsmSyncTest {
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -93,12 +93,12 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 { _, _, _ -> },
-                state1.with<Int>(),
+                state1.with(),
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -106,56 +106,78 @@ class FsmSyncTest {
     fun `starts the state machine`() {
         assertThat(fsm.isRunning).isFalse
 
-        fsm.start(42)
+        fsm.start()
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state).isSameAs(state1)
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState).isSameAs(state1)
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isFalse
     }
 
     @Test
     fun `trigger changes to the next state`() {
-        fsm.start(42)
+        fsm.start()
 
-        fsm.trigger(Event1, 23)
+        fsm.trigger(Event1)
 
         assertThat(fsm.isRunning).isTrue
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state).isSameAs(state2)
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState).isSameAs(state2)
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isFalse
     }
 
     @Test
     fun `trigger to final stops the state machine`() {
-        fsm.start(42)
-        fsm.trigger(Event1, 23)
+        fsm.start()
+        fsm.trigger(Event1)
 
-        fsm.trigger(Event1, 23)
+        fsm.trigger(Event1)
 
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isTrue
-        assertThat(fsm.currentState.state is InitialState).isFalse
-        assertThat(fsm.currentState.state is FinalState).isTrue
+        assertThat(fsm.currentState is InitialState).isFalse
+        assertThat(fsm.currentState is FinalState).isTrue
     }
 
     @Test
     fun `using predefined NoEvent on normal transition throws an exception`() {
-        fsm.start(42)
+        fsm.start()
 
-        assertThatThrownBy { fsm.trigger(NoEvent, 23) }.isInstanceOf(FsmException::class.java)
+        assertThatThrownBy { fsm.trigger(NoEvent) }.isInstanceOf(FsmException::class.java)
     }
 
     @Test
-    fun `doAction triggers the action in state`() {
-        doInStateResult = 0
+    fun `doAction triggers the do action in state (with parameter)`() {
+        val state1 = State("first")
+        var doInStateResult = 0
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1.with().doInState<Int> { data -> doInStateResult = data!! },
+            )
         fsm.start(42)
 
         fsm.doAction(22)
 
         assertThat(doInStateResult).isEqualTo(22)
+    }
+
+    @Test
+    fun `doAction triggers the do action in state (without parameter)`() {
+        val state1 = State("first")
+        var doInStateResult = 0
+        val fsm =
+            fsmOf(
+                "myFsm",
+                state1.with().doInState { doInStateResult = 13 },
+            )
+        fsm.start(42)
+
+        fsm.doAction()
+
+        assertThat(doInStateResult).isEqualTo(13)
     }
 
     @Test
@@ -168,17 +190,17 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state3)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state3)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
@@ -197,18 +219,18 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state3)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state3)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state3)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state3)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
@@ -232,18 +254,18 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state4)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state4)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state3)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state3)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
@@ -261,7 +283,7 @@ class FsmSyncTest {
                 { machine, state, event, handled -> println("$machine - $state - $event - $handled") },
             )
 
-        fsm.start(1)
+        fsm.start(42)
 
         runBlocking {
             launch {
@@ -286,7 +308,7 @@ class FsmSyncTest {
                         }
                     }
 
-                fsm.trigger(Event2, -1)
+                fsm.trigger(Event2)
                 assertThat(timeInMillis).isGreaterThan(1000)
                 println("trigger task 1 (${Thread.currentThread().threadId()}) has run.")
             }
@@ -313,14 +335,14 @@ class FsmSyncTest {
     fun `calling invalid state handler throws FsmException`() {
         val fsm = createSyncFsm({ _, _, _ -> throw InvalidClassException("Test") }, { _, _, _, _ -> })
 
-        assertThrows<FsmException> { fsm.start(1) }
+        assertThrows<FsmException> { fsm.start() }
     }
 
     @Test
     fun `calling invalid trigger handler throws FsmException`() {
         val fsm = createSyncFsm({ _, _, _ -> }, { _, _, _, _ -> throw InvalidObjectException("Test") })
 
-        assertThrows<FsmException> { fsm.start(1) }
+        assertThrows<FsmException> { fsm.start() }
     }
 
     @Test
@@ -333,15 +355,15 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>()
-                    .transition(Event1, state2),
+                    .with()
+                    .transition<Event1>(state2),
                 state2
-                    .with<Int>()
-                    .transition(state2)
-                    .transition(Event2, state3),
+                    .with()
+                    .transitionWithoutEvent(state2)
+                    .transition<Event2>(state3),
                 state3
-                    .with<Int>()
-                    .transition(Event1, state1),
+                    .with()
+                    .transition<Event1>(state1),
             )
         }
     }
@@ -356,26 +378,24 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with<Int>()
-                    .transition(Event1, state2),
+                    .with()
+                    .transition<Event1>(state2),
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .transition(Event2, state3),
+                    .with()
+                    .transition<Event1>(state2)
+                    .transition<Event2>(state3),
                 state3
-                    .with<Int>()
-                    .transition(Event1, state1),
+                    .with()
+                    .transition<Event1>(state1),
             )
 
-        fsm.debugInterface.resume(state2, 3)
+        fsm.debugInterface.resume(state2)
 
-        assertThat(fsm.currentState.state).isEqualTo(state2)
+        assertThat(fsm.currentState).isEqualTo(state2)
     }
 
     @Nested
     inner class NestedFsmTests {
-        private val tickEvent = object : Event("Tick") {}
-
         private val state1Child1 = State("state1Child1")
         private val state2Child1 = State("state2Child1")
 
@@ -392,98 +412,98 @@ class FsmSyncTest {
             fsmOf(
                 "child1",
                 state1Child1
-                    .with<Int>()
-                    .transition(tickEvent, state2Child1),
+                    .with()
+                    .transition<Tick>(state2Child1),
                 state2Child1
-                    .with<Int>()
-                    .transitionToFinal(tickEvent),
+                    .with()
+                    .transitionToFinal<Tick>(),
             )
 
         private val childMachine2 =
             fsmOf(
                 "child2",
                 state1Child2
-                    .with<Int>()
-                    .transition(tickEvent, state2Child2),
+                    .with()
+                    .transition<Tick>(state2Child2),
                 state2Child2
-                    .with<Int>()
-                    .transition(tickEvent, state3Child2),
+                    .with()
+                    .transition<Tick>(state3Child2),
                 state3Child2
-                    .with<Int>()
-                    .transition(tickEvent, state4Child2),
+                    .with()
+                    .transition<Tick>(state4Child2),
                 state4Child2
-                    .with<Int>()
-                    .transitionToFinal(tickEvent),
+                    .with()
+                    .transitionToFinal<Tick>(),
             )
 
         private val mainMachine =
             fsmOf(
                 "main",
                 state1Main
-                    .with<Int>()
-                    .transition(tickEvent, state2Main),
+                    .with()
+                    .transition<Tick>(state2Main),
                 state2Main
-                    .with<Int>()
+                    .with()
                     .children(listOf(childMachine1, childMachine2))
-                    .transition(state3Main),
+                    .transitionWithoutEvent(state3Main),
                 state3Main
-                    .with<Int>()
-                    .transition(tickEvent, state1Main),
+                    .with()
+                    .transition<Tick>(state1Main),
             )
 
         @Test
         fun `test use of children`() {
-            mainMachine.start(1)
+            mainMachine.start()
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(mainMachine.currentState).isEqualTo(state1Main)
             assertThat(childMachine1.isRunning).isFalse
             assertThat(childMachine2.isRunning).isFalse
 
-            mainMachine.trigger(tickEvent, 2)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isTrue
             assertThat(childMachine2.isRunning).isTrue
-            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+            assertThat(childMachine1.currentState).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state1Child2)
 
-            mainMachine.trigger(tickEvent, 3)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
-            assertThat(childMachine1.currentState.state).isEqualTo(state2Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state2Child2)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
+            assertThat(childMachine1.currentState).isEqualTo(state2Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state2Child2)
 
-            mainMachine.trigger(tickEvent, 4)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.currentState.state).isEqualTo(state3Child2)
+            assertThat(childMachine2.currentState).isEqualTo(state3Child2)
 
-            mainMachine.trigger(tickEvent, 5)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.currentState.state).isEqualTo(state4Child2)
+            assertThat(childMachine2.currentState).isEqualTo(state4Child2)
 
-            mainMachine.trigger(tickEvent, 6)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state3Main)
-            assertThat(childMachine1.isRunning).isFalse
-            assertThat(childMachine2.isRunning).isFalse
-
-            mainMachine.trigger(tickEvent, 7)
-
-            assertThat(mainMachine.currentState.state).isEqualTo(state1Main)
+            assertThat(mainMachine.currentState).isEqualTo(state3Main)
             assertThat(childMachine1.isRunning).isFalse
             assertThat(childMachine2.isRunning).isFalse
 
-            mainMachine.trigger(tickEvent, 8)
+            mainMachine.trigger(Tick)
 
-            assertThat(mainMachine.currentState.state).isEqualTo(state2Main)
+            assertThat(mainMachine.currentState).isEqualTo(state1Main)
+            assertThat(childMachine1.isRunning).isFalse
+            assertThat(childMachine2.isRunning).isFalse
+
+            mainMachine.trigger(Tick)
+
+            assertThat(mainMachine.currentState).isEqualTo(state2Main)
             assertThat(childMachine1.isRunning).isTrue
             assertThat(childMachine2.isRunning).isTrue
-            assertThat(childMachine1.currentState.state).isEqualTo(state1Child1)
-            assertThat(childMachine2.currentState.state).isEqualTo(state1Child2)
+            assertThat(childMachine1.currentState).isEqualTo(state1Child1)
+            assertThat(childMachine2.currentState).isEqualTo(state1Child2)
         }
     }
 }

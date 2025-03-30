@@ -19,12 +19,12 @@ class FsmAsyncTest {
             fsmAsyncOf(
                 "myFsm",
                 { _, _, _ -> },
-                state1.with<Int>(),
+                state1.with(),
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
-        assertThat(fsm.currentState.state is InitialState).isTrue
-        assertThat(fsm.currentState.state is FinalState).isFalse
+        assertThat(fsm.currentState is InitialState).isTrue
+        assertThat(fsm.currentState is FinalState).isFalse
         assertThat(fsm.name).isEqualTo("myFsm")
     }
 
@@ -38,20 +38,20 @@ class FsmAsyncTest {
                 name = "myFsm",
                 { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
                 { _, _, _, _ -> },
-                state1.with<Int>().transition(Event1, state2).entry {
+                state1.with().transition<Event1>(state2).entry<Int> {
                     println(it)
                     Thread.sleep(100)
                 },
                 state2
-                    .with<Int>()
-                    .transition(Event1, state2)
-                    .entry {
+                    .with()
+                    .transition<Event1>(state2)
+                    .entry<Int> {
                         println(it)
                         Thread.sleep(100)
-                    }.transition(Event2, FinalState()),
+                    }.transition<Event2>(FinalState()),
             )
 
-        fsm.start(1)
+        fsm.start()
 
         runBlocking {
             launch {
@@ -71,12 +71,12 @@ class FsmAsyncTest {
                     measureTimeMillis {
                         (0..5).forEach {
                             println("triggering $it.")
-                            fsm.trigger(Event1, it)
+                            fsm.trigger(Event1)
                             delay(10)
                         }
                     }
 
-                fsm.trigger(Event2, -1)
+                fsm.trigger(Event2)
                 assertThat(timeInMillis).isLessThan(500)
                 println("trigger task 1 (${Thread.currentThread().threadId()}) has run.")
             }

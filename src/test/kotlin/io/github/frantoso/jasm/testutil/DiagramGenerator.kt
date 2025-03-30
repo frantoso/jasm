@@ -20,15 +20,15 @@ import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.Fsm
 import io.github.frantoso.jasm.History
 import io.github.frantoso.jasm.IState
+import io.github.frantoso.jasm.ITransition
 import io.github.frantoso.jasm.InitialState
 import io.github.frantoso.jasm.NoEvent
 import io.github.frantoso.jasm.StartEvent
 import io.github.frantoso.jasm.StateContainerBase
-import io.github.frantoso.jasm.Transition
 import io.github.frantoso.jasm.TransitionEndPoint
 import java.io.File
 
-fun <T> List<StateContainerBase<T, out IState>>.complete(infos: List<StateInfo>): List<StateContainerInfo<T>> {
+fun List<StateContainerBase<out IState>>.complete(infos: List<StateInfo>): List<StateContainerInfo> {
     val stateContainerInfoMap = this.associate { it.state to StateContainerInfo(it) }.toMutableMap()
     infos.forEach {
         val info = stateContainerInfoMap[it.state]!!
@@ -45,12 +45,12 @@ class StateInfo(
     val hasDeepHistory = endPoint.history.isDeepHistory
 }
 
-class StateContainerInfo<T>(
-    val container: StateContainerBase<T, out IState>,
+class StateContainerInfo(
+    val container: StateContainerBase<out IState>,
     val hasHistory: Boolean = false,
     val hasDeepHistory: Boolean = false,
 ) {
-    fun add(stateInfo: StateInfo): StateContainerInfo<T> =
+    fun add(stateInfo: StateInfo): StateContainerInfo =
         StateContainerInfo(
             container,
             hasHistory || stateInfo.hasHistory,
@@ -59,10 +59,10 @@ class StateContainerInfo<T>(
 }
 
 // https://github.com/nidi3/graphviz-java
-class MultipleDiagramGenerator<T>(
-    fsm: Fsm<T>,
+class MultipleDiagramGenerator(
+    fsm: Fsm,
     private val level: Int = 0,
-) : DiagramGenerator<T>(fsm) {
+) : DiagramGenerator(fsm) {
     private val childGenerators =
         stateContainers
             .flatMap { it.debugInterface.childDump }
@@ -77,10 +77,10 @@ class MultipleDiagramGenerator<T>(
             .let { graph().directed().with(it) }
 }
 
-open class DiagramGenerator<T>(
-    fsm: Fsm<T>,
+open class DiagramGenerator(
+    fsm: Fsm,
 ) {
-    internal val stateContainers: List<StateContainerBase<T, out IState>> =
+    internal val stateContainers: List<StateContainerBase<out IState>> =
         listOf(fsm.debugInterface.initialState) + fsm.debugInterface.stateDump
 
     private val transitions = stateContainers.flatMap { it.transitions }
@@ -125,7 +125,7 @@ open class DiagramGenerator<T>(
     ) = toFile(fsmGraph, fileName, width, PNG)
 
     companion object {
-        private val <T>StateContainerBase<T, out IState>.standardNodeBase: Node
+        private val StateContainerBase<out IState>.standardNodeBase: Node
             get() =
                 node(id)
                     .with(
@@ -137,22 +137,22 @@ open class DiagramGenerator<T>(
                         Color.LIGHTSKYBLUE.fill(),
                     ).with(Font.name("Arial"))
 
-        private val <T>StateContainerBase<T, out IState>.standardNode: Node
+        private val StateContainerBase<out IState>.standardNode: Node
             get() = standardNodeBase.with(Label.of(name))
 
-        private val <T>StateContainerBase<T, out IState>.parentNode: Node
+        private val StateContainerBase<out IState>.parentNode: Node
             get() = standardNode.with(Label.html(name.nestedLabel))
 
-        private fun <T> StateContainerBase<T, out IState>.historyNode(isNested: Boolean): Node =
+        private fun StateContainerBase<out IState>.historyNode(isNested: Boolean): Node =
             standardNode.with(Label.html(name.historyLabel(isNested)))
 
-        private fun <T> StateContainerBase<T, out IState>.deepHistoryNode(isNested: Boolean): Node =
+        private fun StateContainerBase<out IState>.deepHistoryNode(isNested: Boolean): Node =
             standardNode.with(Label.html(name.deepHistoryLabel(isNested)))
 
-        private fun <T> StateContainerBase<T, out IState>.historyDeepHistoryNode(isNested: Boolean): Node =
+        private fun StateContainerBase<out IState>.historyDeepHistoryNode(isNested: Boolean): Node =
             standardNode.with(Label.html(name.historyAndDeepHistoryLabel(isNested)))
 
-        private val <T>StateContainerBase<T, out IState>.initialNode: Node
+        private val StateContainerBase<out IState>.initialNode: Node
             get() =
                 node(id)
                     .with(
@@ -162,7 +162,7 @@ open class DiagramGenerator<T>(
                         Label.of(""),
                     ).with(Size.mode(Size.Mode.FIXED).size(0.3, 0.3))
 
-        private val <T>StateContainerBase<T, out IState>.finalNode: Node
+        private val StateContainerBase<out IState>.finalNode: Node
             get() =
                 node(id)
                     .with(
@@ -172,7 +172,7 @@ open class DiagramGenerator<T>(
                         Label.of(""),
                     ).with(Size.mode(Size.Mode.FIXED).size(0.3, 0.3))
 
-        val <T>StateContainerInfo<T>.node: Node
+        val StateContainerInfo.node: Node
             get() =
                 when {
                     container.state is InitialState -> container.initialNode
@@ -197,12 +197,12 @@ open class DiagramGenerator<T>(
                 .toFile(File(fileName))
         }
 
-        private val <T>Transition<T>.label
+        private val ITransition.label
             get() =
                 Label.of(
-                    when (trigger::class) {
+                    when (eventType) {
                         StartEvent::class, NoEvent::class -> ""
-                        else -> trigger.name
+                        else -> eventType.simpleName ?: "Event"
                     },
                 )
 
@@ -289,7 +289,7 @@ open class DiagramGenerator<T>(
                 """.trimIndent()
         }
 
-        private fun <T> Node.use(transition: Transition<T>): Link =
+        private fun Node.use(transition: ITransition): Link =
             when (transition.endPoint.history) {
                 History.H -> Factory.to(this.port("hist")).with(transition.label, Font.name("Arial"), Font.size(10))
                 History.Hd -> Factory.to(this.port("deep")).with(transition.label, Font.name("Arial"), Font.size(10))

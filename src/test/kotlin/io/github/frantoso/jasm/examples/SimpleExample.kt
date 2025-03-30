@@ -3,6 +3,7 @@ package io.github.frantoso.jasm.examples
 import io.github.frantoso.jasm.Event
 import io.github.frantoso.jasm.FsmSync
 import io.github.frantoso.jasm.State
+import io.github.frantoso.jasm.dataEvent
 import io.github.frantoso.jasm.fsmOf
 import io.github.frantoso.jasm.testutil.DiagramGenerator
 import io.github.frantoso.jasm.testutil.TestData
@@ -22,7 +23,7 @@ class SimpleExample {
     private val trafficLight = TrafficLight()
 
     class TrafficLight {
-        val fsm: FsmSync<Int>
+        val fsm: FsmSync
         val showingRed = State("ShowingRed")
         val showingRedYellow = State("ShowingRedYellow")
         val showingYellow = State("ShowingYellow")
@@ -34,21 +35,21 @@ class SimpleExample {
                 fsmOf(
                     "simple traffic light",
                     showingRed
-                        .with<Int>()
-                        .entry { println("x--    $it") }
-                        .transition(Tick, showingRedYellow),
+                        .with()
+                        .entry<Int> { println("x--    $it") }
+                        .transition<Tick>(showingRedYellow),
                     showingRedYellow
-                        .with<Int>()
-                        .entry { println("xx-    $it") }
-                        .transition(Tick, showingGreen),
+                        .with()
+                        .entry<Int> { println("xx-    $it") }
+                        .transition<Tick>(showingGreen),
                     showingGreen
-                        .with<Int>()
-                        .entry { println("--x    $it") }
-                        .transition(Tick, showingYellow),
+                        .with()
+                        .entry<Int> { println("--x    $it") }
+                        .transition<Tick>(showingYellow),
                     showingYellow
-                        .with<Int>()
-                        .entry { println("-x-    $it") }
-                        .transition(Tick, showingRed),
+                        .with()
+                        .entry { println("-x-    ry") }
+                        .transition<Tick>(showingRed),
                 )
         }
     }
@@ -62,28 +63,28 @@ class SimpleExample {
     fun `steps through the states`() {
         val fsm = trafficLight.fsm
 
-        fsm.start(1)
+        fsm.start()
         assertThat(fsm.currentState.name).isEqualTo("ShowingRed")
 
-        fsm.trigger(Tick, 1)
+        fsm.trigger(dataEvent<Tick, Int>(1))
         assertThat(fsm.currentState.name).isEqualTo("ShowingRedYellow")
 
-        fsm.trigger(Tick, 1)
+        fsm.trigger(Tick)
         assertThat(fsm.currentState.name).isEqualTo("ShowingGreen")
 
-        fsm.trigger(Tick, 1)
+        fsm.trigger(dataEvent<Tick, Int>(3))
         assertThat(fsm.currentState.name).isEqualTo("ShowingYellow")
 
-        fsm.trigger(Tick, 2)
+        fsm.trigger(Tick)
         assertThat(fsm.currentState.name).isEqualTo("ShowingRed")
 
-        fsm.trigger(Tick, 2)
+        fsm.trigger(Tick)
         assertThat(fsm.currentState.name).isEqualTo("ShowingRedYellow")
 
-        fsm.trigger(Tick, 2)
+        fsm.trigger(Tick)
         assertThat(fsm.currentState.name).isEqualTo("ShowingGreen")
 
-        fsm.trigger(Tick, 2)
+        fsm.trigger(Tick)
         assertThat(fsm.currentState.name).isEqualTo("ShowingYellow")
     }
 
@@ -92,12 +93,12 @@ class SimpleExample {
     fun `changes to the right state (0-switch coverage)`() =
         // @formatter:off
             listOf(
-                listOf(TestData(startState = trafficLight.showingRed, event = Tick, data = 1, endState = trafficLight.showingRedYellow, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingRedYellow, event = Tick, data = 1, endState = trafficLight.showingGreen, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingGreen, event = Tick, data = 1, endState = trafficLight.showingYellow, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingYellow, event = Tick, data = 1, endState = trafficLight.showingRed, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingRed, event = Tick,  endState = trafficLight.showingRedYellow, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingRedYellow, event = Tick, endState = trafficLight.showingGreen, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingGreen, event = Tick, endState = trafficLight.showingYellow, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingYellow, event = Tick, endState = trafficLight.showingRed, wasHandled = true)),
 
-                listOf(TestData(startState = trafficLight.showingRed, event = OtherEvent, data = 1, endState = trafficLight.showingRed, wasHandled = false)),
+                listOf(TestData(startState = trafficLight.showingRed, event = OtherEvent, endState = trafficLight.showingRed, wasHandled = false)),
                 // @formatter:on
             ).mapIndexed { index, data ->
                 DynamicTest.dynamicTest("${"%02d".format(index)} - changes from ${data.first().startState} to ${data.last().endState}") {
@@ -110,14 +111,14 @@ class SimpleExample {
     fun `changes to the right state (1-switch coverage)`() =
         // @formatter:off
             listOf(
-                listOf(TestData(startState = trafficLight.showingRed, event = Tick, data = 1, endState = trafficLight.showingRedYellow, wasHandled = true),
-                       TestData(startState = trafficLight.showingRedYellow, event = Tick, data = 1, endState = trafficLight.showingGreen, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingRedYellow, event = Tick, data = 1, endState = trafficLight.showingGreen, wasHandled = true),
-                       TestData(startState = trafficLight.showingGreen, event = Tick, data = 1, endState = trafficLight.showingYellow, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingGreen, event = Tick, data = 1, endState = trafficLight.showingYellow, wasHandled = true),
-                       TestData(startState = trafficLight.showingYellow, event = Tick, data = 1, endState = trafficLight.showingRed, wasHandled = true)),
-                listOf(TestData(startState = trafficLight.showingYellow, event = Tick, data = 1, endState = trafficLight.showingRed, wasHandled = true),
-                       TestData(startState = trafficLight.showingRed, event = Tick, data = 1, endState = trafficLight.showingRedYellow, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingRed, event = Tick, endState = trafficLight.showingRedYellow, wasHandled = true),
+                       TestData(startState = trafficLight.showingRedYellow, event = Tick, endState = trafficLight.showingGreen, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingRedYellow, event = Tick, endState = trafficLight.showingGreen, wasHandled = true),
+                       TestData(startState = trafficLight.showingGreen, event = Tick, endState = trafficLight.showingYellow, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingGreen, event = Tick, endState = trafficLight.showingYellow, wasHandled = true),
+                       TestData(startState = trafficLight.showingYellow, event = Tick, endState = trafficLight.showingRed, wasHandled = true)),
+                listOf(TestData(startState = trafficLight.showingYellow, event = Tick, endState = trafficLight.showingRed, wasHandled = true),
+                       TestData(startState = trafficLight.showingRed, event = Tick, endState = trafficLight.showingRedYellow, wasHandled = true)),
                 // @formatter:on
             ).mapIndexed { index, data ->
                 DynamicTest.dynamicTest("${"%02d".format(index)} - changes from ${data.first().startState} to ${data.last().endState}") {
@@ -131,42 +132,5 @@ class SimpleExample {
 
         generator.toSvg("build/reports/simple-traffic-light.svg")
         generator.toPng("build/reports/simple-traffic-light.png")
-    }
-
-    @Test
-    fun `new stuff`() {
-        val showingRed = State("ShowingRed")
-        val showingRedYellow = State("ShowingRedYellow")
-        val showingYellow = State("ShowingYellow")
-        val showingGreen = State("ShowingGreen")
-
-        val fsm2 =
-            fsmOf(
-                "simple traffic light",
-                showingRed
-                    .with<Int>()
-                    .entry { println("x--    $it") }
-                    .transition(Tick, showingRedYellow),
-                showingRedYellow
-                    .with<Int>()
-                    .entry { println("xx-    $it") }
-                    .transition(Tick, showingGreen),
-                showingGreen
-                    .with<Int>()
-                    .entry { println("--x    $it") }
-                    .transition(Tick, showingYellow),
-                showingYellow
-                    .with<Int>()
-                    .entry { println("-x-    $it") }
-                    .transition(Tick, showingRed),
-            )
-
-        fsm2.start(1)
-
-        fsm2.trigger(Tick, 2)
-        fsm2.trigger(Tick, 2)
-        fsm2.trigger(Tick, 2)
-        fsm2.trigger(Tick, 2)
-        fsm2.trigger(Tick, 2)
     }
 }

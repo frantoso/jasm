@@ -7,6 +7,7 @@ import io.github.frantoso.jasm.Fsm
 import io.github.frantoso.jasm.FsmAsync
 import io.github.frantoso.jasm.FsmSync
 import io.github.frantoso.jasm.State
+import io.github.frantoso.jasm.dataEvent
 import io.github.frantoso.jasm.examples.SimpleExample.Tick
 import io.github.frantoso.jasm.fsmAsyncOf
 import io.github.frantoso.jasm.fsmOf
@@ -27,7 +28,6 @@ class ReadmeGenerator {
     @Test
     fun `test a simple state machine`() {
         // BEGIN_FSM_CODE_SNIPPET
-        // create the state machine
 
         // create the states...
         val showingRed = State("ShowingRed")
@@ -41,39 +41,49 @@ class ReadmeGenerator {
                 "simple traffic light",
                 // define initial state with transitions and other parameters...
                 showingRed
-                    .with<Int>() // associate the event data type with the state
-                    .entry { println("x--    $it") } // add an entry function
-                    .transition(Tick, showingRedYellow), // add one or more transitions
+                    .with() // prepare the state for usage
+                    .entry { println("x--") } // add an entry function
+                    .transition<Tick>(showingRedYellow), // add one or more transitions
                 // define other states with transitions and other parameters...
                 showingRedYellow
-                    .with<Int>()
-                    .entry { println("xx-    $it") }
-                    .transition(Tick, showingGreen),
+                    .with()
+                    .entry { println("xx-") }
+                    .transition<Tick>(showingGreen),
                 showingGreen
-                    .with<Int>()
-                    .entry { println("--x    $it") }
-                    .transition(Tick, showingYellow),
+                    .with()
+                    .entry { println("--x") }
+                    .transition<Tick>(showingYellow),
                 showingYellow
-                    .with<Int>()
-                    .entry { println("-x-    $it") }
-                    .transition(Tick, showingRed),
+                    .with()
+                    .entry { println("-x-") }
+                    .transition<Tick>(showingRed),
             )
 
         // start the state machine
-        fsm.start(1)
+        fsm.start()
 
         assertThat(fsm.isRunning).isTrue
 
         // trigger an event
-        fsm.trigger(Tick, 1)
+        fsm.trigger(Tick)
 
-        assertThat(fsm.currentState.state).isEqualTo(showingRedYellow)
+        assertThat(fsm.currentState).isEqualTo(showingRedYellow)
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README
         io.github.frantoso.jasm.testutil
             .DiagramGenerator(fsm)
             .toSvg(fsmFileName)
+    }
+
+    // BEGIN_EVENT_DEF_CODE_SNIPPET
+    object Event1 : Event()
+
+    object Event2 : Event()
+    // END_EVENT_DEF_CODE_SNIPPET
+
+    @Test
+    fun `synchronous vs asynchronous`() {
     }
 
     @Test
@@ -98,9 +108,9 @@ class ReadmeGenerator {
 
                     There are a lot of variants known to implement state machines.
                     Most of them merge the code of the state machines behavior together with the functional code.
-                    A better solution is to strictly separate the code for the state machines logic from
+                    A better solution is to strictly separate the code of the state machines logic from
                     the functional code. An existing state machine component is parametrized to define its behavior.
-                    
+
                     This readme includes the documentation of an implementation of a ready to use FSM (Finite State Machine).
                     Using this state machine is very simple. Just define the states, the transitions and the state actions.
                     """.trimIndent()
@@ -109,7 +119,7 @@ class ReadmeGenerator {
                 +
                     """
                     1. Model your state machine inside a graphical editor e.g. UML tool or any other applicable graphic tool.
-                    2. Create an instance of the FSM class in your code.
+                    2. Create all states in your code.
                     3. Transfer all your transitions from the graphic to the code.
                     4. Register the action handlers for your states.
                     5. Start the state machine.
@@ -128,7 +138,7 @@ class ReadmeGenerator {
                 +
                     """
                     The library jasm is distributed via MavenCentral.
-                    
+
                     **build.gradle.kts**
                     """.trimIndent()
                 mdCodeBlock(
@@ -137,7 +147,7 @@ class ReadmeGenerator {
                         repositories {
                             mavenCentral()
                         }
-                        
+
                         dependencies {
                             implementation("io.github.frantoso:jasm:<version>")
                         }
@@ -148,13 +158,14 @@ class ReadmeGenerator {
                 section("How to: Create a simple State Machine")
                 +
                     """
-                    This topic shows how to implement a simple Finite State Machine using the StateMachine component.
-                    The example shows the modelling of a single traffic light.                    
+                    This topic shows how to implement a simple Finite State Machine using the jasm component.
+                    The example shows the modelling of a single traffic light.
                     """.trimIndent()
                 subSection("Start with the model of the state machine")
                 +
                     """
-                    ![Simple state machine]($fsmFileName)  
+                    ![Simple state machine]($fsmFileName)
+                    
                     *A simple traffic light with four states, starting with showing the red light.*
                     """.trimIndent()
                 subSection("Create the state machine and the states")
@@ -164,59 +175,43 @@ class ReadmeGenerator {
                 )
 
                 section("The classes")
-                subSection("FsmSync<T>")
+                subSection("FsmSync")
                 +
                     """
-                    A synchronous (blocking) state machine. The call to trigger is blocking. 
-                    
-                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
-                    A value of this type must be provided at the call of start() or trigger().
+                    A synchronous (blocking) state machine. The call to trigger is blocking.
                     """.trimIndent()
                 example {
-                    data class MyFsmData(
-                        val x: Int,
-                        val y: String,
-                    )
-
                     val state = State("MyState")
                     val fsm =
                         fsmOf(
                             "MyFsm",
                             // add at minimum one state
                             state
-                                .with<MyFsmData>()
-                                .transitionToFinal(Tick),
+                                .with()
+                                .transitionToFinal<Tick>(),
                         )
 
-                    fsm.start(MyFsmData(42, "test"))
+                    fsm.start()
                 }
 
-                subSection("FsmAsync<T>")
+                subSection("FsmAsync")
                 +
                     """
-                    An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are 
+                    An asynchronous (non-blocking) state machine. The call to trigger is non-blocking. The events are
                     queued and triggered sequentially.
-                    
-                    The type parameter ot the function with<..>() is used to associate the type of event-data with the state.
-                    A value of this type must be provided at the call of start() or trigger().
                     """.trimIndent()
                 example {
-                    data class MyFsmData(
-                        val x: Int,
-                        val y: String,
-                    )
-
                     val state = State("MyState")
                     val fsm =
                         fsmAsyncOf(
                             "MyFsm",
                             // add at minimum one state
                             state
-                                .with<MyFsmData>()
-                                .transitionToFinal(Tick),
+                                .with()
+                                .transitionToFinal<Tick>(),
                         )
 
-                    fsm.start(MyFsmData(1, "2"))
+                    fsm.start()
                 }
 
                 section("Synchronous vs Asynchronous")
@@ -225,61 +220,64 @@ class ReadmeGenerator {
                     A function calling trigger() on a synchronous state machine waits until all entry and exit functions
                     are executed and the transition table was processed. After the trigger() function is returned,
                     the next function can call trigger().
-                    
+
                     At an asynchronous state machine the call to trigger only blocks until the event is queued. All
                     the processing will be executed non-blocking.
-                    
+
                     Following example shows the difference. The code is identically, only the type of state machine is
                      different.
                     """.trimIndent()
+                exampleFromSnippet(
+                    sourceFileName = "src/test/kotlin/io/github/frantoso/jasm/doc/ReadmeGenerator.kt",
+                    snippetId = "EVENT_DEF_CODE_SNIPPET",
+                )
                 example {
                     val output = mutableListOf<String>()
-                    val event1 = object : Event() {}
-                    val event2 = object : Event() {}
                     val state1 = State("first")
                     val state2 = State("second")
 
-                    fun createFsmSync(): FsmSync<Int> =
+                    fun createFsmSync(): FsmSync =
                         fsmOf(
                             "MySyncFsm",
                             state1
-                                .with<Int>()
-                                .transition(event1, state2)
-                                .entry {
+                                .with()
+                                .transition<Event1>(state2)
+                                .entry<Int> {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
                                 },
                             state2
-                                .with<Int>()
-                                .transition(event1, state2)
-                                .entry {
+                                .with()
+                                .transition<Event1>(state2)
+                                .entry<Int> {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
-                                }.transitionToFinal(event2),
+                                }.transitionToFinal<Event2>(),
                         )
 
-                    fun createFsmAsync(): FsmAsync<Int> =
+                    fun createFsmAsync(): FsmAsync =
                         fsmAsyncOf(
                             "MyAsyncFsm",
                             state1
-                                .with<Int>()
-                                .transition(event1, state2)
-                                .entry {
+                                .with()
+                                .transition<Event1>(state2)
+                                .entry<Int> {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
                                 },
                             state2
-                                .with<Int>()
-                                .transition(event1, state2)
-                                .entry {
+                                .with()
+                                .transition<Event1>(state2)
+                                .entry<Int> {
                                     output.addLast("- $it")
                                     Thread.sleep(100)
-                                }.transitionToFinal(event2),
+                                }.transitionToFinal<Event2>(),
                         )
 
-                    fun runFsm(fsm: Fsm<Int>): List<String> {
+                    fun runFsm(fsm: Fsm): List<String> {
                         output.clear()
-                        fsm.start(1)
+
+                        fsm.start(42)
 
                         runBlocking {
                             launch {
@@ -291,17 +289,17 @@ class ReadmeGenerator {
                             launch {
                                 (0..5).forEach {
                                     output.addLast("+ $it")
-                                    fsm.trigger(event1, it)
+                                    fsm.trigger(dataEvent<Event1, Int>(it))
                                     delay(10)
                                 }
 
-                                fsm.trigger(event2, -1)
+                                fsm.trigger(dataEvent<Event2, Int>(-1))
                             }
 
                             launch {
                                 (10..15).forEach {
                                     output.addLast("+ $it")
-                                    fsm.trigger(event1, it)
+                                    fsm.trigger(dataEvent<Event1, Int>(it))
                                     delay(1)
                                 }
                             }
@@ -327,7 +325,7 @@ class ReadmeGenerator {
 
                      || synchronous | asynchronous |
                      ||:-----------:|:------------:|
-                     ||     - 1     |     - 1      |
+                     ||    - 42     |    - 42      |
                      ||     + 0     |     + 0      |
                      ||     - 0     |     - 0      |
                      ||    + 10     |     + 10     |
