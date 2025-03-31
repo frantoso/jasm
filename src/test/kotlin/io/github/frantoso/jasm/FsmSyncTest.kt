@@ -483,5 +483,28 @@ class FsmSyncTest {
             assertThat(childMachine1.currentState).isEqualTo(state1Child1)
             assertThat(childMachine2.currentState).isEqualTo(state1Child2)
         }
+
+        @Test
+        fun `creates a state-tree`() {
+            mainMachine.start()
+            mainMachine.trigger(Tick)
+            mainMachine.trigger(Tick)
+
+            val tree = mainMachine.currentStateTree
+
+            assertThat(tree.state).isEqualTo(state2Main)
+            assertThat(tree.children[0].state).isEqualTo(state2Child1)
+            assertThat(tree.children[1].state).isEqualTo(state2Child2)
+            assertThat(tree.children[0].children).isEmpty()
+            assertThat(tree.children[1].children).isEmpty()
+
+            val containerTree = mainMachine.currentStateContainerTree
+
+            assertThat(containerTree.container.state).isEqualTo(state2Main)
+            assertThat(containerTree.children[0].container.state).isEqualTo(state2Child1)
+            assertThat(containerTree.children[1].container.state).isEqualTo(state2Child2)
+            assertThat(containerTree.children[0].children).isEmpty()
+            assertThat(containerTree.children[1].children).isEmpty()
+        }
     }
 }

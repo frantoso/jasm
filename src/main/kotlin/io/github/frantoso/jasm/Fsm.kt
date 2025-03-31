@@ -93,6 +93,26 @@ abstract class Fsm(
     val currentState: IState get() = currentStateContainer.state
 
     /**
+     * Gets the currently active state and, if available, all active child states.
+     */
+    val currentStateTree: StateInfo
+        get() =
+            StateInfo(
+                currentState,
+                currentStateContainer.children.map { it.currentStateTree },
+            )
+
+    /**
+     * Gets the currently active state container and, if available, all active child containers.
+     */
+    val currentStateContainerTree: StateContainerInfo
+        get() =
+            StateContainerInfo(
+                currentStateContainer,
+                currentStateContainer.children.map { it.currentStateContainerTree },
+            )
+
+    /**
      * Gets a value indicating whether the automaton is started and has not reached the final state.
      */
     val isRunning get() = currentState !is InitialState && !hasFinished

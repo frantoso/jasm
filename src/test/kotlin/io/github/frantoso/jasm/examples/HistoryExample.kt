@@ -271,6 +271,50 @@ class HistoryExample {
     }
 
     @Test
+    fun `creates a state-tree`() {
+        val main = Main()
+        val working = main.working
+        val l2Working = working.l2Working
+        main.start()
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+        main.trigger(Events.Next)
+
+        val tree = main.machine.currentStateTree
+
+        assertThat(tree.state).isEqualTo(main.stateWorking)
+        assertThat(tree.children.first().state).isEqualTo(working.stateL2Working)
+        assertThat(
+            tree.children
+                .first()
+                .children
+                .first()
+                .state,
+        ).isEqualTo(l2Working.stateL3W3)
+
+        val containerTree = main.machine.currentStateContainerTree
+
+        assertThat(containerTree.container.state).isEqualTo(main.stateWorking)
+        assertThat(
+            containerTree.children
+                .first()
+                .container.state,
+        ).isEqualTo(working.stateL2Working)
+        assertThat(
+            containerTree.children
+                .first()
+                .children
+                .first()
+                .container.state,
+        ).isEqualTo(l2Working.stateL3W3)
+    }
+
+    @Test
     fun `generates a graph from the state machine`() {
         val generator =
             io.github.frantoso.jasm.testutil
