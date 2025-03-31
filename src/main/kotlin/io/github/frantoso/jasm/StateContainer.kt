@@ -614,26 +614,3 @@ class InitialStateContainer(
 class FinalStateContainer(
     state: FinalState,
 ) : StateContainerBase<FinalState>(state, emptyList(), emptyList(), NoAction, NoAction, NoAction)
-
-/**
- * Encapsulates a normal state in a container.
- */
-fun State.with(): StateContainer =
-    StateContainer(
-        state = this,
-        children = emptyList(),
-        transitions = emptyList(),
-        onEntry = NoAction,
-        onExit = NoAction,
-        onDoInState = NoAction,
-    )
-
-/**
- * Encapsulates a final state in a container.
- */
-fun FinalState.with(): FinalStateContainer = FinalStateContainer(state = this)
-
-/**
- * Encapsulates an initial state in a container.
- */
-fun InitialState.with(): InitialStateContainer = InitialStateContainer(state = this, transitions = emptyList())

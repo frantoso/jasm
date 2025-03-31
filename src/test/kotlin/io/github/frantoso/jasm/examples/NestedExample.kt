@@ -5,9 +5,9 @@ import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.FsmSync
 import io.github.frantoso.jasm.NoEvent
 import io.github.frantoso.jasm.State
+import io.github.frantoso.jasm.entry
 import io.github.frantoso.jasm.fsmOf
 import io.github.frantoso.jasm.testutil.MultipleDiagramGenerator
-import io.github.frantoso.jasm.with
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
@@ -36,12 +36,10 @@ class NestedExample {
                 fsmOf(
                     "traffic light controller",
                     controllingDayMode
-                        .with()
                         .entry<Parameters> { println("starting day mode    $it") }
                         .transition<NoEvent, Parameters>(controllingNightMode)
                         .child(fsmDay),
                     controllingNightMode
-                        .with()
                         .entry<Parameters> { println("starting night mode    $it") }
                         .transition<NoEvent, Parameters>(controllingDayMode)
                         .child(fsmNight),
@@ -57,19 +55,15 @@ class NestedExample {
             return fsmOf(
                 "traffic light day mode",
                 showingRed
-                    .with()
                     .entry<Parameters> { println("x--    $it") }
                     .transition<Tick, Parameters>(showingRedYellow),
                 showingRedYellow
-                    .with()
                     .entry<Parameters> { println("xx-    $it") }
                     .transition<Tick>(showingGreen),
                 showingGreen
-                    .with()
                     .entry<Parameters> { println("--x    $it") }
                     .transition<Tick>(showingYellow),
                 showingYellow
-                    .with()
                     .entry<Parameters> { println("-x-    $it") }
                     .transition<Tick, Parameters>(showingRed) { it!!.isDayMode }
                     .transition<Tick, Parameters>(FinalState()) { !it!!.isDayMode },
@@ -83,12 +77,10 @@ class NestedExample {
             return fsmOf(
                 "traffic light night mode",
                 showingYellow
-                    .with()
                     .entry<Parameters> { println("x--    $it") }
                     .transition<Tick, Parameters>(showingNothing) { !it!!.isDayMode }
                     .transition<Tick, Parameters>(FinalState()) { it!!.isDayMode },
                 showingNothing
-                    .with()
                     .entry<Parameters> { println("xx-    $it") }
                     .transition<Tick>(showingYellow),
             )

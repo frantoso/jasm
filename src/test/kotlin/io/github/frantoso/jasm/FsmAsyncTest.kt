@@ -19,7 +19,7 @@ class FsmAsyncTest {
             fsmAsyncOf(
                 "myFsm",
                 { _, _, _ -> },
-                state1.with(),
+                state1.toContainer(),
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
@@ -38,12 +38,11 @@ class FsmAsyncTest {
                 name = "myFsm",
                 { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
                 { _, _, _, _ -> },
-                state1.with().transition<Event1>(state2).entry<Int> {
+                state1.transition<Event1>(state2).entry<Int> {
                     println(it)
                     Thread.sleep(100)
                 },
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .entry<Int> {
                         println(it)

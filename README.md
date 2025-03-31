@@ -69,20 +69,16 @@ val fsm =
     "simple traffic light",
     // define initial state with transitions and other parameters...
     showingRed
-      .with() // prepare the state for usage
       .entry { println("x--") } // add an entry function
       .transition<Tick>(showingRedYellow), // add one or more transitions
     // define other states with transitions and other parameters...
     showingRedYellow
-      .with()
       .entry { println("xx-") }
       .transition<Tick>(showingGreen),
     showingGreen
-      .with()
       .entry { println("--x") }
       .transition<Tick>(showingYellow),
     showingYellow
-      .with()
       .entry { println("-x-") }
       .transition<Tick>(showingRed),
   )
@@ -111,7 +107,6 @@ val fsm =
     "MyFsm",
     // add at minimum one state
     state
-      .with()
       .transitionToFinal<Tick>(),
   )
 
@@ -130,7 +125,6 @@ val fsm =
     "MyFsm",
     // add at minimum one state
     state
-      .with()
       .transitionToFinal<Tick>(),
   )
 
@@ -164,14 +158,12 @@ fun createFsmSync(): FsmSync =
   fsmOf(
     "MySyncFsm",
     state1
-      .with()
       .transition<Event1>(state2)
       .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .with()
       .transition<Event1>(state2)
       .entry<Int> {
         output.addLast("- $it")
@@ -183,14 +175,12 @@ fun createFsmAsync(): FsmAsync =
   fsmAsyncOf(
     "MyAsyncFsm",
     state1
-      .with()
       .transition<Event1>(state2)
       .entry<Int> {
         output.addLast("- $it")
         Thread.sleep(100)
       },
     state2
-      .with()
       .transition<Event1>(state2)
       .entry<Int> {
         output.addLast("- $it")

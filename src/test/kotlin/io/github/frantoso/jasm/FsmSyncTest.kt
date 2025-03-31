@@ -30,8 +30,8 @@ class FsmSyncTest {
     fun createFsm() {
         state1 = State("first")
         state2 = State("second")
-        stateContainer1 = state1.with().transition<Event1>(state2)
-        stateContainer2 = state2.with().transition<Event1>(FinalState())
+        stateContainer1 = state1.transition<Event1>(state2)
+        stateContainer2 = state2.transition<Event1>(FinalState())
 
         fsm =
             FsmSync(
@@ -55,12 +55,11 @@ class FsmSyncTest {
                 "myFsm",
                 onStateChanged,
                 onTriggered,
-                state1.with().transition<Event1>(state2).entry<Int> {
+                state1.transition<Event1>(state2).entry<Int> {
                     println(it)
                     Thread.sleep(100)
                 },
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .entry<Int> {
                         println(it)
@@ -77,7 +76,7 @@ class FsmSyncTest {
                 "myFsm",
                 { _, _, _ -> },
                 { _, _, _, _ -> },
-                state1.with(),
+                state1.toContainer(),
                 emptyList(),
             )
         assertThat(fsm.isRunning).isFalse
@@ -93,7 +92,7 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 { _, _, _ -> },
-                state1.with(),
+                state1.toContainer(),
             )
         assertThat(fsm.isRunning).isFalse
         assertThat(fsm.hasFinished).isFalse
@@ -155,7 +154,7 @@ class FsmSyncTest {
         val fsm =
             fsmOf(
                 "myFsm",
-                state1.with().doInState<Int> { data -> doInStateResult = data!! },
+                state1.doInState<Int> { data -> doInStateResult = data!! },
             )
         fsm.start(42)
 
@@ -171,7 +170,7 @@ class FsmSyncTest {
         val fsm =
             fsmOf(
                 "myFsm",
-                state1.with().doInState { doInStateResult = 13 },
+                state1.doInState { doInStateResult = 13 },
             )
         fsm.start(42)
 
@@ -190,14 +189,12 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with()
                     .transition<Event1>(state2)
                     .entry<Int> {
                         println(it)
                         Thread.sleep(100)
                     },
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state3)
                     .entry<Int> {
@@ -219,7 +216,6 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state3)
                     .entry<Int> {
@@ -227,7 +223,6 @@ class FsmSyncTest {
                         Thread.sleep(100)
                     },
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state3)
                     .entry<Int> {
@@ -254,7 +249,6 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state4)
                     .entry<Int> {
@@ -262,7 +256,6 @@ class FsmSyncTest {
                         Thread.sleep(100)
                     },
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state3)
                     .entry<Int> {
@@ -355,14 +348,11 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with()
                     .transition<Event1>(state2),
                 state2
-                    .with()
                     .transitionWithoutEvent(state2)
                     .transition<Event2>(state3),
                 state3
-                    .with()
                     .transition<Event1>(state1),
             )
         }
@@ -378,14 +368,11 @@ class FsmSyncTest {
             fsmOf(
                 "myFsm",
                 state1
-                    .with()
                     .transition<Event1>(state2),
                 state2
-                    .with()
                     .transition<Event1>(state2)
                     .transition<Event2>(state3),
                 state3
-                    .with()
                     .transition<Event1>(state1),
             )
 
@@ -412,10 +399,8 @@ class FsmSyncTest {
             fsmOf(
                 "child1",
                 state1Child1
-                    .with()
                     .transition<Tick>(state2Child1),
                 state2Child1
-                    .with()
                     .transitionToFinal<Tick>(),
             )
 
@@ -423,16 +408,12 @@ class FsmSyncTest {
             fsmOf(
                 "child2",
                 state1Child2
-                    .with()
                     .transition<Tick>(state2Child2),
                 state2Child2
-                    .with()
                     .transition<Tick>(state3Child2),
                 state3Child2
-                    .with()
                     .transition<Tick>(state4Child2),
                 state4Child2
-                    .with()
                     .transitionToFinal<Tick>(),
             )
 
@@ -440,14 +421,11 @@ class FsmSyncTest {
             fsmOf(
                 "main",
                 state1Main
-                    .with()
                     .transition<Tick>(state2Main),
                 state2Main
-                    .with()
                     .children(listOf(childMachine1, childMachine2))
                     .transitionWithoutEvent(state3Main),
                 state3Main
-                    .with()
                     .transition<Tick>(state1Main),
             )
 

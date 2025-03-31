@@ -4,7 +4,9 @@ import io.github.frantoso.jasm.Event
 import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.State
 import io.github.frantoso.jasm.fsmOf
-import io.github.frantoso.jasm.with
+import io.github.frantoso.jasm.transition
+import io.github.frantoso.jasm.transitionToFinal
+import io.github.frantoso.jasm.transitionWithoutEvent
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
@@ -34,19 +36,15 @@ class HistoryExample {
             fsmOf(
                 "L2-Preparing",
                 stateL3P1
-                    .with()
                     .transition<Events.Next>(stateL3P2)
                     .entry(::p1Entry),
                 stateL3P2
-                    .with()
                     .transition<Events.Next>(stateL3P3)
                     .entry(::p2Entry),
                 stateL3P3
-                    .with()
                     .transition<Events.Next>(stateL3P4)
                     .entry(::p3Entry),
                 stateL3P4
-                    .with()
                     .transitionToFinal<Events.Next>()
                     .entry(::p4Entry),
             )
@@ -71,23 +69,18 @@ class HistoryExample {
             fsmOf(
                 "L2-Working",
                 stateL3W1
-                    .with()
                     .transition<Events.Next>(stateL3W2)
                     .entry(::w1Entry),
                 stateL3W2
-                    .with()
                     .transition<Events.Next>(stateL3W3)
                     .entry(::w2Entry),
                 stateL3W3
-                    .with()
                     .transition<Events.Next>(stateL3W4)
                     .entry(::w3Entry),
                 stateL3W4
-                    .with()
                     .transition<Events.Next>(stateL3W5)
                     .entry(::w4Entry),
                 stateL3W5
-                    .with()
                     .transitionToFinal<Events.Next>()
                     .entry(::w5Entry),
             )
@@ -116,16 +109,13 @@ class HistoryExample {
             fsmOf(
                 "Working",
                 stateL2Initializing
-                    .with()
                     .transition<Events.Next>(stateL2Preparing)
                     .entry(::l2InitializingEntry),
                 stateL2Preparing
-                    .with()
                     .transitionWithoutEvent(stateL2Working)
                     .entry(::l2PreparingEntry)
                     .child(l2Preparing.machine),
                 stateL2Working
-                    .with()
                     .transitionToFinal<Events.Next>()
                     .entry(::l2WorkingEntry)
                     .child(l2Working.machine),
@@ -161,16 +151,13 @@ class HistoryExample {
             fsmOf(
                 "Main",
                 stateInitializing
-                    .with()
                     .transition<Events.Next>(stateWorking),
                 stateWorking
-                    .with()
                     .transition<Events.Break>(stateHandlingError)
                     .transitionWithoutEvent(stateFinalizing)
                     .entry(::workingEntry)
                     .child(working.machine),
                 stateHandlingError
-                    .with()
                     .transition<Events.Restart>(stateWorking)
                     .transition<Events.Continue>(stateWorking.history)
                     .transition<Events.ContinueDeep>(stateWorking.deepHistory)
@@ -178,7 +165,6 @@ class HistoryExample {
                     .transitionToFinal<Events.Break>()
                     .entry(::handlingErrorEntry),
                 stateFinalizing
-                    .with()
                     .transition<Events.Next>(stateInitializing)
                     .entry(::finalizingEntry),
             )
