@@ -3,15 +3,15 @@ package io.github.frantoso.jasm
 /**
  * Helper class to store information when iterating through states.
  */
-data class StateInfo(
+data class StateTreeNode(
     val state: IState,
-    val children: List<StateInfo>,
+    val children: List<StateTreeNode>,
 )
 
 /**
  * Helper class to store information when iterating through states.
  */
-data class StateContainerInfo(
+data class StateContainerTreeNode(
     val container: StateContainerBase<*>,
-    val children: List<StateContainerInfo>,
+    val children: List<StateContainerTreeNode>,
 )

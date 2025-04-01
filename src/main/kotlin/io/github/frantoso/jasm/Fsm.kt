@@ -95,9 +95,9 @@ abstract class Fsm(
     /**
      * Gets the currently active state and, if available, all active child states.
      */
-    val currentStateTree: StateInfo
+    val currentStateTree: StateTreeNode
         get() =
-            StateInfo(
+            StateTreeNode(
                 currentState,
                 currentStateContainer.children.map { it.currentStateTree },
             )
@@ -105,9 +105,9 @@ abstract class Fsm(
     /**
      * Gets the currently active state container and, if available, all active child containers.
      */
-    val currentStateContainerTree: StateContainerInfo
+    val currentStateContainerTree: StateContainerTreeNode
         get() =
-            StateContainerInfo(
+            StateContainerTreeNode(
                 currentStateContainer,
                 currentStateContainer.children.map { it.currentStateContainerTree },
             )
