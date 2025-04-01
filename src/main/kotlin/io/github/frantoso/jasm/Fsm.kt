@@ -27,7 +27,7 @@ abstract class Fsm(
     /**
      * Gets the initial state.
      */
-    private val initial: InitialStateContainer = InitialState().with().transition(startState.state)
+    private val initial: InitialStateContainer = InitialState().transition(startState.state)
 
     /**
      * The start state in a list for later use.
@@ -47,7 +47,7 @@ abstract class Fsm(
         if ((otherStates + startStateAsList).flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
             emptyList()
         } else {
-            listOf(FinalState().with())
+            listOf(FinalStateContainer(FinalState()))
         }
 
     /**
@@ -66,7 +66,7 @@ abstract class Fsm(
                 }.distinct()
                 .filterIsInstance<State>()
                 .filterNot { state -> knownStates.map { it.state }.contains(state) }
-                .map { it.with() }
+                .map { it.toContainer() }
                 .toList()
         }
 
@@ -91,6 +91,26 @@ abstract class Fsm(
      * Gets the currently active state.
      */
     val currentState: IState get() = currentStateContainer.state
+
+    /**
+     * Gets the currently active state and, if available, all active child states.
+     */
+    val currentStateTree: StateTreeNode
+        get() =
+            StateTreeNode(
+                currentState,
+                currentStateContainer.children.map { it.currentStateTree },
+            )
+
+    /**
+     * Gets the currently active state container and, if available, all active child containers.
+     */
+    val currentStateContainerTree: StateContainerTreeNode
+        get() =
+            StateContainerTreeNode(
+                currentStateContainer,
+                currentStateContainer.children.map { it.currentStateContainerTree },
+            )
 
     /**
      * Gets a value indicating whether the automaton is started and has not reached the final state.
@@ -492,3 +512,15 @@ fun fsmAsyncOf(
     startState: StateContainerBase<out EndState>,
     vararg otherStates: StateContainerBase<out IState>,
 ): FsmAsync = FsmAsync(name, onStateChanged, { _, _, _, _ -> }, startState, otherStates.toList())
+
+/**
+ * Encapsulates an initial state in a container.
+ */
+private fun InitialState.toContainer(): InitialStateContainer = InitialStateContainer(state = this, transitions = emptyList())
+
+/**
+ * Adds a new transition to the state.
+ * @param stateTo A reference to the end point of this transition.
+ * @return Returns a new state container.
+ */
+private fun InitialState.transition(stateTo: EndState): InitialStateContainer = toContainer().transition(stateTo)

@@ -15,8 +15,8 @@ class StateContainerTests {
     private object FinishEvent : Event()
 
     private fun getContainerWithChild(): StateContainer {
-        val fsm = fsmOf("fsmChild", State("Start").with())
-        val container = State(TEST_STATE_1_NAME).with().child(fsm)
+        val fsm = fsmOf("fsmChild", State("Start").toContainer())
+        val container = State(TEST_STATE_1_NAME).child(fsm)
         container.start()
         return container
     }
@@ -48,7 +48,7 @@ class StateContainerTests {
                 fsmOf(
                     FSM_NAME,
                     State("Start")
-                        .with(),
+                        .toContainer(),
                 )
             val container = emptyContainer(State(TEST_STATE_1_NAME)).child(fsm)
 
@@ -63,13 +63,13 @@ class StateContainerTests {
                 fsmOf(
                     FSM_NAME,
                     State("Start")
-                        .with(),
+                        .toContainer(),
                 )
             val fsm2 =
                 fsmOf(
                     "Otto",
                     State("Start")
-                        .with(),
+                        .toContainer(),
                 )
             val container =
                 emptyContainer(State(TEST_STATE_1_NAME))
@@ -143,7 +143,7 @@ class StateContainerTests {
 
         @Test
         fun `adds a transition without event to a nested state`() {
-            val fsm = fsmOf("fsm", State("Start").with())
+            val fsm = fsmOf("fsm", State("Start").toContainer())
             val container =
                 emptyContainer(State(TEST_STATE_1_NAME))
                     .child(fsm)
@@ -330,10 +330,9 @@ class StateContainerTests {
         fun `adds with chaining`() {
             var entryCounter = 1
             var exitCounter = 1
-            val fsm = fsmOf("fsm", State("Start").with())
+            val fsm = fsmOf("fsm", State("Start").toContainer())
             val container =
                 State(TEST_STATE_1_NAME)
-                    .with()
                     .entry<Int> { data -> entryCounter += data!! }
                     .exit<Int> { data -> exitCounter += data!! }
                     .child(fsm)
@@ -390,7 +389,7 @@ class StateContainerTests {
             var counter = 1
             val container =
                 spyk(
-                    State(TEST_STATE_1_NAME).with().entry<Int> { data -> counter += data!! },
+                    State(TEST_STATE_1_NAME).entry<Int> { data -> counter += data!! },
                     recordPrivateCalls = true,
                 )
 
@@ -411,7 +410,7 @@ class StateContainerTests {
         fun `starting a normal state without parameters`() {
             var counter = 1
             val container =
-                spyk(State(TEST_STATE_1_NAME).with().entry { counter = 42 }, recordPrivateCalls = true)
+                spyk(State(TEST_STATE_1_NAME).entry { counter = 42 }, recordPrivateCalls = true)
 
             container.start()
 
@@ -428,7 +427,7 @@ class StateContainerTests {
 
         @Test
         fun `starting a normal state with history ends in a normal start (calls entry)`() {
-            val container = spyk(State(TEST_STATE_1_NAME).with(), recordPrivateCalls = true)
+            val container = spyk(State(TEST_STATE_1_NAME).toContainer(), recordPrivateCalls = true)
 
             container.start(NoEvent, History.H)
 
@@ -460,7 +459,7 @@ class StateContainerTests {
 
         @Test
         fun `starting a normal state with deep history ends in a normal start (calls entry)`() {
-            val container = spyk(State(TEST_STATE_1_NAME).with(), recordPrivateCalls = true)
+            val container = spyk(State(TEST_STATE_1_NAME).toContainer(), recordPrivateCalls = true)
 
             container.start(NoEvent, History.Hd)
 
@@ -547,7 +546,6 @@ class StateContainerTests {
             val childContainer =
                 spyk(
                     State("ChildStart")
-                        .with()
                         .transition<TestEvent>(State(TEST_STATE_2_NAME))
                         .transitionToFinal<FinishEvent>(),
                     recordPrivateCalls = true,
@@ -556,7 +554,6 @@ class StateContainerTests {
             val container =
                 spyk(
                     State(TEST_STATE_1_NAME)
-                        .with()
                         .transition<StopEvent>(State(TEST_STATE_2_NAME))
                         .child(fsm),
                     recordPrivateCalls = true,
@@ -626,7 +623,7 @@ class StateContainerTests {
 
     @Test
     fun `default setting of actions does not throw any exception`() {
-        val container = State("Otto").with()
+        val container = State("Otto").toContainer()
 
         assertDoesNotThrow { container.onEntry.fire(dataEvent<NoEvent, Int>(1)) }
         assertDoesNotThrow { container.onExit.fire(dataEvent<NoEvent, Int>(3)) }

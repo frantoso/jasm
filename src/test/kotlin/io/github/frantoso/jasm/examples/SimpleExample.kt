@@ -4,11 +4,11 @@ import io.github.frantoso.jasm.Event
 import io.github.frantoso.jasm.FsmSync
 import io.github.frantoso.jasm.State
 import io.github.frantoso.jasm.dataEvent
+import io.github.frantoso.jasm.entry
 import io.github.frantoso.jasm.fsmOf
 import io.github.frantoso.jasm.testutil.DiagramGenerator
 import io.github.frantoso.jasm.testutil.TestData
 import io.github.frantoso.jasm.testutil.testStateChange
-import io.github.frantoso.jasm.with
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DynamicTest
@@ -35,19 +35,15 @@ class SimpleExample {
                 fsmOf(
                     "simple traffic light",
                     showingRed
-                        .with()
                         .entry<Int> { println("x--    $it") }
                         .transition<Tick>(showingRedYellow),
                     showingRedYellow
-                        .with()
                         .entry<Int> { println("xx-    $it") }
                         .transition<Tick>(showingGreen),
                     showingGreen
-                        .with()
                         .entry<Int> { println("--x    $it") }
                         .transition<Tick>(showingYellow),
                     showingYellow
-                        .with()
                         .entry { println("-x-    ry") }
                         .transition<Tick>(showingRed),
                 )
