@@ -39,20 +39,16 @@ abstract class Event : IEvent {
 
 /**
  * A container to bundle an event with data.
+ * It is open to support DataEvent objects with fixed data.
  */
-class DataEvent<T : Any>(
+open class DataEvent<T : Any>(
     val data: T,
-    private val eventType: KClass<out IEvent>,
+    final override val type: KClass<out IEvent>,
 ) : IEvent {
-    /**
-     * Gets the type of the encapsulated event.
-     */
-    override val type: KClass<*> get() = eventType
-
     /**
      * Returns a string representation of the event - it's name.
      */
-    override fun toString(): String = eventType.simpleName ?: "Event"
+    final override fun toString(): String = type.simpleName ?: "Event"
 
     /**
      * Assigns the enclosed data to a new event type.

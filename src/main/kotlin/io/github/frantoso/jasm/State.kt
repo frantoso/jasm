@@ -7,8 +7,13 @@ import kotlinx.atomicfu.atomic
  * @param name The name of the state.
  */
 abstract class StateBase(
-    val name: String,
+    name: String,
 ) {
+    /**
+     * Gets the name of this state.
+     */
+    val name: String = name.ifBlank { this::class.simpleName ?: "State" }
+
     /**
      * Returns a String that represents the current Object.
      */
@@ -80,10 +85,10 @@ abstract class EndStateBase(
 
 /**
  * A class to model a normal state.
- * @param name The name of the state.
+ * @param name The name of the state. If the name is empty or blank the name of the class is used.
  */
-class State(
-    name: String,
+open class State(
+    name: String = "",
 ) : EndStateBase(name),
     StartState
 

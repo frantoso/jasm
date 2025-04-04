@@ -26,10 +26,14 @@ class FsmSyncTest {
     private lateinit var stateContainer2: StateContainer
     private lateinit var fsm: FsmSync
 
+    class FirstState : State("first")
+
+    class SecondState : State("second")
+
     @BeforeEach
     fun createFsm() {
-        state1 = State("first")
-        state2 = State("second")
+        state1 = FirstState()
+        state2 = SecondState()
         stateContainer1 = state1.transition<Event1>(state2)
         stateContainer2 = state2.transition<Event1>(FinalState())
 

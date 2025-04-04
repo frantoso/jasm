@@ -86,7 +86,7 @@ class EventTests {
 
         @Test
         fun `creates a data event with helper function`() {
-            val event = dataEvent<TestEvent, Int>(42)
+            val event = dataEvent<TestEvent, _>(42)
 
             assertThat(event.type).isEqualTo(TestEvent::class)
             assertThat(event.data).isEqualTo(42)
@@ -94,7 +94,7 @@ class EventTests {
 
         @Test
         fun `toString shows the simple class name of the encapsulated event`() {
-            val event = dataEvent<TestEvent, Int>(42)
+            val event = dataEvent<TestEvent, _>(42)
 
             assertThat(event.toString()).isEqualTo("TestEvent")
         }
@@ -105,6 +105,13 @@ class EventTests {
             val event = DataEvent(42, anonymous::class)
 
             assertThat(event.toString()).isEqualTo("Event")
+        }
+
+        @Test
+        fun `create data event object through inheritance`() {
+            val event = object : DataEvent<Int>(42, TestEvent::class) {}
+
+            assertThat(event.toString()).isEqualTo("TestEvent")
         }
     }
 }

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.TestFactory
 import kotlin.test.Test
 
 class StateClassesTest {
+    object StateNo1 : State()
+
     @Nested
     inner class StateTest {
         @Test
@@ -39,6 +41,21 @@ class StateClassesTest {
             assertThat(endPoint.history.isDeepHistory).isTrue
             assertThat(endPoint.state).isSameAs(state)
         }
+
+        @TestFactory
+        fun `tests whether it creates the right name`() =
+            listOf(
+                State("test-state-1") to "test-state-1",
+                State("") to "State",
+                State(" ") to "State",
+                State("  ") to "State",
+                State("test-state-2") to "test-state-2",
+                StateNo1 to "StateNo1",
+            ).mapIndexed { index, (state, expected) ->
+                DynamicTest.dynamicTest("${"%02d".format(index)} - name should be $expected") {
+                    assertThat(state.name).isEqualTo(expected)
+                }
+            }
     }
 
     @Nested
