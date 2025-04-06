@@ -32,7 +32,7 @@ class NestedExample {
                 "traffic light day mode",
                 showingRed
                     .entry<Parameters> { println("x--    $it") }
-                    .transition<Tick, Parameters>(showingRedYellow),
+                    .transition<Tick>(showingRedYellow),
                 showingRedYellow
                     .entry<Parameters> { println("xx-    $it") }
                     .transition<Tick>(showingGreen),
@@ -61,10 +61,10 @@ class NestedExample {
                     "traffic light controller",
                     controllingDayMode
                         .entry<Parameters> { println("starting day mode    $it") }
-                        .transition<NoEvent, Parameters>(controllingNightMode),
+                        .transition<NoEvent>(controllingNightMode),
                     controllingNightMode
                         .entry<Parameters> { println("starting night mode    $it") }
-                        .transition<NoEvent, Parameters>(controllingDayMode)
+                        .transition<NoEvent>(controllingDayMode)
                         .child(fsmNight),
                 )
         }
