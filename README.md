@@ -289,18 +289,20 @@ class ControllingDayMode : CompositeState() {
   private val showingYellow = State("ShowingYellow")
   private val showingGreen = State("ShowingGreen")
 
-  override val subMachine =
-    fsmOf(
-      name,
-      showingRed
-        .transition<Tick>(showingRedYellow),
-      showingRedYellow
-        .transition<Tick>(showingGreen),
-      showingGreen
-        .transition<Tick>(showingYellow),
-      showingYellow
-        .transition<Tick, Boolean>(showingRed) { it!! }
-        .transition<Tick, Boolean>(FinalState()) { !it!! },
+  override val subMachines =
+    listOf(
+      fsmOf(
+        name,
+        showingRed
+          .transition<Tick>(showingRedYellow),
+        showingRedYellow
+          .transition<Tick>(showingGreen),
+        showingGreen
+          .transition<Tick>(showingYellow),
+        showingYellow
+          .transition<Tick, Boolean>(showingRed) { it!! }
+          .transition<Tick, Boolean>(FinalState()) { !it!! },
+      ),
     )
 }
 ```

@@ -93,18 +93,20 @@ class ReadmeGenerator {
         private val showingYellow = State("ShowingYellow")
         private val showingGreen = State("ShowingGreen")
 
-        override val subMachine =
-            fsmOf(
-                name,
-                showingRed
-                    .transition<Tick>(showingRedYellow),
-                showingRedYellow
-                    .transition<Tick>(showingGreen),
-                showingGreen
-                    .transition<Tick>(showingYellow),
-                showingYellow
-                    .transition<Tick, Boolean>(showingRed) { it!! }
-                    .transition<Tick, Boolean>(FinalState()) { !it!! },
+        override val subMachines =
+            listOf(
+                fsmOf(
+                    name,
+                    showingRed
+                        .transition<Tick>(showingRedYellow),
+                    showingRedYellow
+                        .transition<Tick>(showingGreen),
+                    showingGreen
+                        .transition<Tick>(showingYellow),
+                    showingYellow
+                        .transition<Tick, Boolean>(showingRed) { it!! }
+                        .transition<Tick, Boolean>(FinalState()) { !it!! },
+                ),
             )
     }
     // END_COMPOSITE_STATE_DEF_CODE_SNIPPET
@@ -146,36 +148,36 @@ class ReadmeGenerator {
 
         trafficLight.start()
         assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingRed")
 
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingRedYellow")
 
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingGreen")
 
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingYellow")
 
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingRed")
 
         isDayMode = false
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingRedYellow")
 
         trafficLight.trigger(Tick, isDayMode)
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
-        assertThat(controllingDayMode.subMachine.isRunning).isTrue
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingGreen")
+        assertThat(controllingDayMode.subMachines[0].isRunning).isTrue
         assertThat(fsmNight.isRunning).isFalse
 
         trafficLight.trigger(Tick, isDayMode)
         assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingYellow")
 
         trafficLight.trigger(Tick, isDayMode)
         assertThat(trafficLight.currentState.name).isEqualTo("ControllingNightMode")
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("Final")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("Final")
         assertThat(fsmNight.currentState.name).isEqualTo("ShowingYellow")
 
         trafficLight.trigger(Tick, isDayMode)
@@ -194,7 +196,7 @@ class ReadmeGenerator {
 
         trafficLight.trigger(Tick, isDayMode)
         assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
-        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(controllingDayMode.subMachines[0].currentState.name).isEqualTo("ShowingRed")
         assertThat(fsmNight.currentState.name).isEqualTo("Final")
 
         // generate diagram picture - only for the README

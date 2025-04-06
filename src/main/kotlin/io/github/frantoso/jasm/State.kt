@@ -100,9 +100,9 @@ abstract class CompositeState(
     name: String = "",
 ) : State(name) {
     /**
-     * Gets the sub state-machine of this composite state.
+     * Gets the sub state-machines of this composite state.
      */
-    abstract val subMachine: FsmSync
+    abstract val subMachines: List<FsmSync>
 }
 
 /**
