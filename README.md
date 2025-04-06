@@ -26,6 +26,7 @@ Using this state machine is very simple. Just define the states, the transitions
 - [Implementing a simple Finite State Machine.](#how-to-create-a-simple-state-machine)
 - [The Classes.](#the-classes)
 - [Synchronous vs Asynchronous.](#synchronous-vs-asynchronous)
+- [Composite States.](#composite-states)
 
 ### Gradle
 
@@ -263,4 +264,83 @@ The output produced by both calls to `runFsm()`:
 |     - 5     |     - 4      |
 |    + 15     |     - 15     |
 |    - 15     |     - 5      |
+
+## Composite States
+
+This library also supports nested state machines through composite states.
+
+A composite state can be build from the scratch or encapsulated in a class derived from `CompositeState`.
+
+### The diagram of the nested state machine
+
+![Simple state machine](images/traffic_light_nested.svg)
+
+*A traffic light with normal operation over the day and flashing yellow in the night.*
+
+### Nested State Machine as Composite State
+
+When deriving from the `CompositeState` class, the sub state machine must be part of the state and
+will be added automatically to the parent state machine when used.
+
+```kotlin
+class ControllingDayMode : CompositeState() {
+  private val showingRed = State("ShowingRed")
+  private val showingRedYellow = State("ShowingRedYellow")
+  private val showingYellow = State("ShowingYellow")
+  private val showingGreen = State("ShowingGreen")
+
+  override val subMachine =
+    fsmOf(
+      name,
+      showingRed
+        .transition<Tick>(showingRedYellow),
+      showingRedYellow
+        .transition<Tick>(showingGreen),
+      showingGreen
+        .transition<Tick>(showingYellow),
+      showingYellow
+        .transition<Tick, Boolean>(showingRed) { it!! }
+        .transition<Tick, Boolean>(FinalState()) { !it!! },
+    )
+}
+```
+
+### Nested State Machine - manually created
+
+A composite state can be also created by using a normal state as base and adding one or more child
+machines when creating the parent state machine.
+
+```kotlin
+val showingNothing = State("ShowingNothing")
+val showingYellow = State("ShowingYellow")
+
+val fsmNight =
+  fsmOf(
+    "ControllingNightMode",
+    showingYellow
+      .transition<Tick, Boolean>(showingNothing) { !it!! }
+      .transition<Tick, Boolean>(FinalState()) { it!! },
+    showingNothing
+      .transition<Tick>(showingYellow),
+  )
+```
+
+### Putting all together
+
+The parent machine with two composite states.
+
+```kotlin
+val controllingDayMode = ControllingDayMode()
+val controllingNightMode = State("ControllingNightMode")
+
+val trafficLight =
+  fsmOf(
+    "TrafficLight",
+    controllingDayMode // is a composite state - child is added automatically
+      .transition<NoEvent>(controllingNightMode),
+    controllingNightMode // normal state to use as a composite state
+      .child(fsmNight) // child must be added manually
+      .transition<NoEvent>(controllingDayMode),
+  )
+```
 

@@ -2,16 +2,21 @@ package io.github.frantoso.jasm.doc
 
 import com.jillesvangurp.kotlin4example.Page
 import com.jillesvangurp.kotlin4example.SourceRepository
+import io.github.frantoso.jasm.CompositeState
 import io.github.frantoso.jasm.Event
+import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.Fsm
 import io.github.frantoso.jasm.FsmAsync
 import io.github.frantoso.jasm.FsmSync
+import io.github.frantoso.jasm.NoEvent
 import io.github.frantoso.jasm.State
+import io.github.frantoso.jasm.child
 import io.github.frantoso.jasm.dataEvent
 import io.github.frantoso.jasm.entry
-import io.github.frantoso.jasm.examples.SimpleExample.Tick
 import io.github.frantoso.jasm.fsmAsyncOf
 import io.github.frantoso.jasm.fsmOf
+import io.github.frantoso.jasm.testutil.DiagramGenerator
+import io.github.frantoso.jasm.testutil.MultipleDiagramGenerator
 import io.github.frantoso.jasm.transition
 import io.github.frantoso.jasm.transitionToFinal
 import kotlinx.coroutines.delay
@@ -26,6 +31,7 @@ import kotlin.test.Test
 @Suppress("ktlint:standard:unary-op-spacing")
 class ReadmeGenerator {
     private val fsmFileName = "images/traffic_light_simple.svg"
+    private val nestedFsmFileName = "images/traffic_light_nested.svg"
 
     @Test
     fun `test a simple state machine`() {
@@ -69,9 +75,7 @@ class ReadmeGenerator {
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README
-        io.github.frantoso.jasm.testutil
-            .DiagramGenerator(fsm)
-            .toSvg(fsmFileName)
+        DiagramGenerator(fsm).toSvg(fsmFileName)
     }
 
     // BEGIN_EVENT_DEF_CODE_SNIPPET
@@ -80,8 +84,121 @@ class ReadmeGenerator {
     object Event2 : Event()
     // END_EVENT_DEF_CODE_SNIPPET
 
+    object Tick : Event()
+
+    // BEGIN_COMPOSITE_STATE_DEF_CODE_SNIPPET
+    class ControllingDayMode : CompositeState() {
+        private val showingRed = State("ShowingRed")
+        private val showingRedYellow = State("ShowingRedYellow")
+        private val showingYellow = State("ShowingYellow")
+        private val showingGreen = State("ShowingGreen")
+
+        override val subMachine =
+            fsmOf(
+                name,
+                showingRed
+                    .transition<Tick>(showingRedYellow),
+                showingRedYellow
+                    .transition<Tick>(showingGreen),
+                showingGreen
+                    .transition<Tick>(showingYellow),
+                showingYellow
+                    .transition<Tick, Boolean>(showingRed) { it!! }
+                    .transition<Tick, Boolean>(FinalState()) { !it!! },
+            )
+    }
+    // END_COMPOSITE_STATE_DEF_CODE_SNIPPET
+
+    @Suppress("KotlinConstantConditions")
     @Test
-    fun `synchronous vs asynchronous`() {
+    fun `composite states`() {
+        // BEGIN_COMPOSITE_STATE_MANUALLY_CODE_SNIPPET
+        val showingNothing = State("ShowingNothing")
+        val showingYellow = State("ShowingYellow")
+
+        val fsmNight =
+            fsmOf(
+                "ControllingNightMode",
+                showingYellow
+                    .transition<Tick, Boolean>(showingNothing) { !it!! }
+                    .transition<Tick, Boolean>(FinalState()) { it!! },
+                showingNothing
+                    .transition<Tick>(showingYellow),
+            )
+        // END_COMPOSITE_STATE_MANUALLY_CODE_SNIPPET
+
+        // BEGIN_USE_COMPOSITE_STATE_CODE_SNIPPET
+        val controllingDayMode = ControllingDayMode()
+        val controllingNightMode = State("ControllingNightMode")
+
+        val trafficLight =
+            fsmOf(
+                "TrafficLight",
+                controllingDayMode // is a composite state - child is added automatically
+                    .transition<NoEvent>(controllingNightMode),
+                controllingNightMode // normal state to use as a composite state
+                    .child(fsmNight) // child must be added manually
+                    .transition<NoEvent>(controllingDayMode),
+            )
+        // END_USE_COMPOSITE_STATE_CODE_SNIPPET
+
+        var isDayMode = true
+
+        trafficLight.start()
+        assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+
+        isDayMode = false
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
+        assertThat(controllingDayMode.subMachine.isRunning).isTrue
+        assertThat(fsmNight.isRunning).isFalse
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(trafficLight.currentState.name).isEqualTo("ControllingNightMode")
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("Final")
+        assertThat(fsmNight.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(fsmNight.currentState.name).isEqualTo("ShowingNothing")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(fsmNight.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(fsmNight.currentState.name).isEqualTo("ShowingNothing")
+
+        isDayMode = true
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(trafficLight.currentState.name).isEqualTo("ControllingNightMode")
+        assertThat(fsmNight.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.trigger(Tick, isDayMode)
+        assertThat(trafficLight.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(fsmNight.currentState.name).isEqualTo("Final")
+
+        // generate diagram picture - only for the README
+        MultipleDiagramGenerator(trafficLight).toSvg(nestedFsmFileName, 1000)
     }
 
     @Test
@@ -130,6 +247,7 @@ class ReadmeGenerator {
                     - [Implementing a simple Finite State Machine.](#how-to-create-a-simple-state-machine)
                     - [The Classes.](#the-classes)
                     - [Synchronous vs Asynchronous.](#synchronous-vs-asynchronous)
+                    - [Composite States.](#composite-states)
                     """.trimIndent()
 
                 subSection("Gradle")
@@ -343,6 +461,54 @@ class ReadmeGenerator {
                      ||    + 15     |     - 15     |
                      ||    - 15     |     - 5      |
                     """.trimIndent()
+
+                section("Composite States")
+                +
+                    """
+                    This library also supports nested state machines through composite states.
+
+                    A composite state can be build from the scratch or encapsulated in a class derived from `CompositeState`.
+                    """.trimIndent()
+
+                subSection("The diagram of the nested state machine")
+                +
+                    """
+                    ![Simple state machine]($nestedFsmFileName)
+                    
+                    *A traffic light with normal operation over the day and flashing yellow in the night.*
+                    """.trimIndent()
+
+                subSection("Nested State Machine as Composite State")
+                +
+                    """
+                    When deriving from the `CompositeState` class, the sub state machine must be part of the state and
+                    will be added automatically to the parent state machine when used.
+                    """.trimIndent()
+                exampleFromSnippet(
+                    sourceFileName = "src/test/kotlin/io/github/frantoso/jasm/doc/ReadmeGenerator.kt",
+                    snippetId = "COMPOSITE_STATE_DEF_CODE_SNIPPET",
+                )
+
+                subSection("Nested State Machine - manually created")
+                +
+                    """
+                    A composite state can be also created by using a normal state as base and adding one or more child
+                    machines when creating the parent state machine.
+                    """.trimIndent()
+                exampleFromSnippet(
+                    sourceFileName = "src/test/kotlin/io/github/frantoso/jasm/doc/ReadmeGenerator.kt",
+                    snippetId = "COMPOSITE_STATE_MANUALLY_CODE_SNIPPET",
+                )
+
+                subSection("Putting all together")
+                +
+                    """
+                    The parent machine with two composite states.
+                    """.trimIndent()
+                exampleFromSnippet(
+                    sourceFileName = "src/test/kotlin/io/github/frantoso/jasm/doc/ReadmeGenerator.kt",
+                    snippetId = "USE_COMPOSITE_STATE_CODE_SNIPPET",
+                )
             }
 
         val readmePage =

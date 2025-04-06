@@ -93,6 +93,19 @@ open class State(
     StartState
 
 /**
+ * A class to model a composite state.
+ * @param name The name of the state. If the name is empty or blank the name of the class is used.
+ */
+abstract class CompositeState(
+    name: String = "",
+) : State(name) {
+    /**
+     * Gets the sub state-machine of this composite state.
+     */
+    abstract val subMachine: FsmSync
+}
+
+/**
  * A class to model the special state 'initial'.
  */
 class InitialState :

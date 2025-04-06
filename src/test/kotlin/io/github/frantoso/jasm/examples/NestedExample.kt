@@ -1,5 +1,6 @@
 package io.github.frantoso.jasm.examples
 
+import io.github.frantoso.jasm.CompositeState
 import io.github.frantoso.jasm.Event
 import io.github.frantoso.jasm.FinalState
 import io.github.frantoso.jasm.FsmSync
@@ -20,43 +21,18 @@ class NestedExample {
 
     private val parameters = Parameters()
 
-    class TrafficLight {
-        val fsmMain: FsmSync
-        val fsmDay: FsmSync
-        val fsmNight: FsmSync
+    class FsmDayMode : CompositeState("ControllingDayMode") {
+        private val showingRed = State("ShowingRed")
+        private val showingRedYellow = State("ShowingRedYellow")
+        private val showingYellow = State("ShowingYellow")
+        private val showingGreen = State("ShowingGreen")
 
-        init {
-            fsmDay = createFsmDayMode()
-            fsmNight = createFsmNightMode()
-
-            val controllingDayMode = State("ControllingDayMode")
-            val controllingNightMode = State("ControllingNightMode")
-
-            fsmMain =
-                fsmOf(
-                    "traffic light controller",
-                    controllingDayMode
-                        .entry<Parameters> { println("starting day mode    $it") }
-                        .transition<NoEvent, Parameters>(controllingNightMode)
-                        .child(fsmDay),
-                    controllingNightMode
-                        .entry<Parameters> { println("starting night mode    $it") }
-                        .transition<NoEvent, Parameters>(controllingDayMode)
-                        .child(fsmNight),
-                )
-        }
-
-        private fun createFsmDayMode(): FsmSync {
-            val showingRed = State("ShowingRed")
-            val showingRedYellow = State("ShowingRedYellow")
-            val showingYellow = State("ShowingYellow")
-            val showingGreen = State("ShowingGreen")
-
-            return fsmOf(
+        override val subMachine =
+            fsmOf(
                 "traffic light day mode",
                 showingRed
                     .entry<Parameters> { println("x--    $it") }
-                    .transition<Tick, Parameters>(showingRedYellow),
+                    .transition<Tick>(showingRedYellow),
                 showingRedYellow
                     .entry<Parameters> { println("xx-    $it") }
                     .transition<Tick>(showingGreen),
@@ -68,6 +44,29 @@ class NestedExample {
                     .transition<Tick, Parameters>(showingRed) { it!!.isDayMode }
                     .transition<Tick, Parameters>(FinalState()) { !it!!.isDayMode },
             )
+    }
+
+    class TrafficLight {
+        val fsmMain: FsmSync
+        val fsmNight: FsmSync
+        val controllingDayMode = FsmDayMode()
+
+        init {
+            fsmNight = createFsmNightMode()
+
+            val controllingNightMode = State("ControllingNightMode")
+
+            fsmMain =
+                fsmOf(
+                    "traffic light controller",
+                    controllingDayMode
+                        .entry<Parameters> { println("starting day mode    $it") }
+                        .transition<NoEvent>(controllingNightMode),
+                    controllingNightMode
+                        .entry<Parameters> { println("starting night mode    $it") }
+                        .transition<NoEvent>(controllingDayMode)
+                        .child(fsmNight),
+                )
         }
 
         private fun createFsmNightMode(): FsmSync {
@@ -92,39 +91,67 @@ class NestedExample {
         val trafficLight = TrafficLight()
 
         trafficLight.fsmMain.start()
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingRed")
-        assertThat(trafficLight.fsmDay.isRunning).isTrue
+        assertThat(trafficLight.fsmMain.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isTrue
         assertThat(trafficLight.fsmNight.isRunning).isFalse
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingRedYellow")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingGreen")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingYellow")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingRed")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
 
         parameters.isDayMode = false
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingRedYellow")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRedYellow")
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingGreen")
-        assertThat(trafficLight.fsmDay.isRunning).isTrue
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingGreen")
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isTrue
         assertThat(trafficLight.fsmNight.isRunning).isFalse
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("ShowingYellow")
+        assertThat(trafficLight.fsmMain.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingYellow")
 
         trafficLight.fsmMain.trigger(Tick, parameters)
-        assertThat(trafficLight.fsmDay.currentState.name).isEqualTo("Final")
+        assertThat(trafficLight.fsmMain.currentState.name).isEqualTo("ControllingNightMode")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("Final")
         assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("ShowingYellow")
-        assertThat(trafficLight.fsmDay.isRunning).isFalse
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isFalse
         assertThat(trafficLight.fsmNight.isRunning).isTrue
+
+        trafficLight.fsmMain.trigger(Tick, parameters)
+        assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("ShowingNothing")
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isFalse
+        assertThat(trafficLight.fsmNight.isRunning).isTrue
+
+        trafficLight.fsmMain.trigger(Tick, parameters)
+        assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("ShowingYellow")
+
+        trafficLight.fsmMain.trigger(Tick, parameters)
+        assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("ShowingNothing")
+
+        parameters.isDayMode = true
+        trafficLight.fsmMain.trigger(Tick, parameters)
+        assertThat(trafficLight.fsmMain.currentState.name).isEqualTo("ControllingNightMode")
+        assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("ShowingYellow")
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isFalse
+        assertThat(trafficLight.fsmNight.isRunning).isTrue
+
+        trafficLight.fsmMain.trigger(Tick, parameters)
+        assertThat(trafficLight.fsmMain.currentState.name).isEqualTo("ControllingDayMode")
+        assertThat(trafficLight.controllingDayMode.subMachine.currentState.name).isEqualTo("ShowingRed")
+        assertThat(trafficLight.fsmNight.currentState.name).isEqualTo("Final")
+        assertThat(trafficLight.controllingDayMode.subMachine.isRunning).isTrue
+        assertThat(trafficLight.fsmNight.isRunning).isFalse
     }
 
     @Test
