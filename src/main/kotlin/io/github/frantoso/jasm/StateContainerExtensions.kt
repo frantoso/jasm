@@ -6,7 +6,7 @@ package io.github.frantoso.jasm
 fun State.toContainer(): StateContainer =
     StateContainer(
         state = this,
-        children = emptyList(),
+        children = (this as? CompositeState)?.let { listOf(it.subMachine) } ?: emptyList(),
         transitions = emptyList(),
         onEntry = NoAction,
         onExit = NoAction,
