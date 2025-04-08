@@ -38,10 +38,12 @@ class FsmAsyncTest {
                 name = "myFsm",
                 { machine, from, to -> println("FSM ${machine.name} changed from ${from.name} to ${to.name}") },
                 { _, _, _, _ -> },
-                state1.transition<Event1>(state2).entry<Int> {
-                    println(it)
-                    Thread.sleep(100)
-                },
+                state1
+                    .transition<Event1>(state2)
+                    .entry<Int> {
+                        println(it)
+                        Thread.sleep(100)
+                    },
                 state2
                     .transition<Event1>(state2)
                     .entry<Int> {
@@ -96,5 +98,35 @@ class FsmAsyncTest {
         }
 
         println("test over")
+    }
+
+    @Test
+    fun `async machine is triggered synchronously via debug interface`() {
+        val state1 = State("first")
+        val state2 = State("second")
+
+        val fsm =
+            fsmAsyncOf(
+                name = "myFsm",
+                state1
+                    .transition<Event1>(state2),
+                state2
+                    .transition<Event1>(state1)
+                    .transition<Event2>(FinalState()),
+            )
+
+        fsm.start()
+
+        fsm.debugInterface.triggerSync(Event1)
+        assertThat(fsm.currentState).isEqualTo(state2)
+
+        fsm.debugInterface.triggerSync(Event1)
+        assertThat(fsm.currentState).isEqualTo(state1)
+
+        fsm.debugInterface.triggerSync(Event1, 42)
+        assertThat(fsm.currentState).isEqualTo(state2)
+
+        fsm.debugInterface.triggerSync(Event2)
+        assertThat(fsm.currentState).isEqualTo(FinalState())
     }
 }
