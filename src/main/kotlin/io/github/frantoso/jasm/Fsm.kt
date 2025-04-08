@@ -266,6 +266,27 @@ abstract class Fsm(
         fun resume(state: State)
 
         /**
+         * Triggers a transition synchronously. Independent of the concrete implementation it calls the synchronous
+         * trigger function from the base class.
+         * @param event The event occurred.
+         * @return Returns true if the event was handled; false otherwise.
+         */
+        fun triggerSync(event: IEvent): Boolean
+
+        /**
+         * Triggers a transition synchronously. Independent of the concrete implementation it calls the synchronous
+         * trigger function from the base class.
+         * @param T The type of the data parameter.
+         * @param event The event occurred.
+         * @param data The data to send with the event.
+         * @return Returns true if the event was handled; false otherwise.
+         */
+        fun <T : Any> triggerSync(
+            event: Event,
+            data: T,
+        ): Boolean = triggerSync(DataEvent(data, event::class))
+
+        /**
          * Gets a snapshot of the states.
          */
         val stateDump: List<StateContainerBase<out IState>>
@@ -305,6 +326,8 @@ abstract class Fsm(
             override fun setState(state: State) = this@Fsm.setState(state.container)
 
             override fun resume(state: State) = this@Fsm.resume(state)
+
+            override fun triggerSync(event: IEvent): Boolean = triggerEvent(event)
 
             override val stateDump: List<StateContainerBase<out IState>> = states
 
