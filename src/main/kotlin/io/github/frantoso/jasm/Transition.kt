@@ -82,7 +82,7 @@ data class DataTransition<T : Any>(
     override fun isAllowed(event: IEvent): Boolean {
         if (!event.type.isSubclassOf(eventType)) return false
         val dataEvent = event as? DataEvent<*> ?: return false
-        if (dataEvent.data::class != dataType) return false
+        if (!dataEvent.data::class.isSubclassOf(dataType)) return false
 
         val data = dataType.javaObjectType.cast(dataEvent.data)
         return guard(data)

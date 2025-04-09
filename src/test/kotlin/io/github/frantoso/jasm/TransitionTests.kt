@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.TestFactory
+import kotlin.reflect.KClass
 import kotlin.test.Test
 
 class TransitionTests {
@@ -12,6 +13,18 @@ class TransitionTests {
         val returnOfGuard: Boolean,
         val expected: Boolean,
     )
+
+    data class TypeTestData(
+        val event: IEvent,
+        val dataType: KClass<*>,
+        val expected: Boolean,
+    )
+
+    interface IBase
+
+    abstract class Base : IBase
+
+    class Derived : Base()
 
     @Nested
     inner class TransitionTest {
@@ -138,6 +151,37 @@ class TransitionTests {
             ).mapIndexed { index, data ->
                 DynamicTest.dynamicTest("${"%02d".format(index)} - isAllowed should return ${data.expected}") {
                     val transition = DataTransition(StartEvent::class, Int::class, State("abc")) { data.returnOfGuard }
+
+                    assertThat(transition.isAllowed(data.event)).isEqualTo(data.expected)
+                }
+            }
+
+        private inline fun <reified T> toKClass(): KClass<*> = T::class
+
+        @TestFactory
+        fun `tests whether a transition is allowed, data check only`() =
+            listOf(
+                TypeTestData(event = dataEvent<StartEvent, _>(1), Int::class, expected = true),
+                TypeTestData(event = dataEvent<StartEvent, _>(1.0), Double::class, expected = true),
+                TypeTestData(event = dataEvent<StartEvent, _>(1), Double::class, expected = false),
+                TypeTestData(
+                    event = dataEvent<StartEvent, List<Int>>(listOf(1)),
+                    toKClass<List<Number>>(),
+                    expected = true,
+                ),
+                TypeTestData(
+                    event = dataEvent<StartEvent, List<Derived>>(listOf(Derived(), Derived())),
+                    toKClass<List<IBase>>(),
+                    expected = true,
+                ),
+                TypeTestData(
+                    event = dataEvent<StartEvent, List<Derived>>(listOf(Derived(), Derived())),
+                    toKClass<List<Number>>(),
+                    expected = true,
+                ),
+            ).mapIndexed { index, data ->
+                DynamicTest.dynamicTest("${"%02d".format(index)} - isAllowed should return ${data.expected}") {
+                    val transition = DataTransition(StartEvent::class, data.dataType, State("abc")) { true }
 
                     assertThat(transition.isAllowed(data.event)).isEqualTo(data.expected)
                 }
