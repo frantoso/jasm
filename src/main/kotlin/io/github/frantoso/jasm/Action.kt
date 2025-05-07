@@ -1,6 +1,7 @@
 package io.github.frantoso.jasm
 
 import kotlin.reflect.KClass
+import kotlin.reflect.full.isSubclassOf
 
 /**
  * The interface an action must provide.
@@ -74,7 +75,7 @@ class DataAction<T : Any>(
             return
         }
 
-        if (dataEvent.data::class != dataType) {
+        if (!dataEvent.data::class.isSubclassOf(dataType)) {
             fire(null)
             return
         }
