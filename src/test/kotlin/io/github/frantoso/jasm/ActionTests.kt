@@ -40,6 +40,16 @@ class ActionTests {
         }
 
         @Test
+        fun `executes the action (derived data type)`() {
+            var counter = 1
+            val action = DataAction(Number::class) { data -> if (data != null) counter += data.toInt() }
+
+            action.fire(dataEvent<StartEvent, Int>(3))
+
+            assertThat(counter).isEqualTo(4)
+        }
+
+        @Test
         fun `executes the action with null as parameter (no data event)`() {
             var counter = 1
             var dataProvided: Any? = 2
