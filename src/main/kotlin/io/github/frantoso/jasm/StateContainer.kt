@@ -3,14 +3,14 @@ package io.github.frantoso.jasm
 import java.util.Collections
 
 /**
- * This class models the behavior of a state of the state machine. It encapsulates a state and stores all it's
+ * This class models the behavior of a state in a state machine. It encapsulates a state and stores all its
  * transitions, children and action functions.
  * @param TState The type of the state to encapsulate.
  * @param state The state to encapsulate.
  * @param children Gets a list of all child state machines.
  * @param transitions Gets a list storing the transition information.
- * @param onEntry Gets the handler method for the states entry action.
- * @param onExit Gets the handler method for the states exit action.
+ * @param onEntry Gets the handler method for the state entry action.
+ * @param onExit Gets the handler method for the state exit action.
  * @param onDoInState Gets the handler method for the states do in state action.
  */
 abstract class StateContainerBase<TState : IState>(
@@ -244,7 +244,7 @@ abstract class StateContainerBase<TState : IState>(
     val id = state.id
 
     /**
-     * Gets an object implementing the debug interface. This allows the access to special functions which are mainly
+     * Gets an object implementing the debug interface. This allows access to special functions which are mainly
      * provided for test and diagnosis.
      */
     val debugInterface =
@@ -260,8 +260,8 @@ abstract class StateContainerBase<TState : IState>(
  * @param state The state to encapsulate.
  * @param children Gets a list of all child state machines.
  * @param transitions Gets a list storing the transition information.
- * @param onEntry Gets the handler method for the states entry action.
- * @param onExit Gets the handler method for the states exit action.
+ * @param onEntry Gets the handler method for the state entry action.
+ * @param onExit Gets the handler method for the state exit action.
  * @param onDoInState Gets the handler method for the states do in state action.
  */
 class StateContainer(
@@ -303,8 +303,8 @@ class StateContainer(
         )
 
     /**
-     * Sets the handler method for the states entry action.
-     * @param action The handler method for the states entry action.
+     * Sets the handler method for the state entry action.
+     * @param action The handler method for the state entry action.
      * @return Returns a new state container.
      */
     fun entry(action: IAction): StateContainer =
@@ -318,23 +318,23 @@ class StateContainer(
         )
 
     /**
-     * Sets the handler method for the states entry action.
+     * Sets the handler method for the state entry action.
      * @param T The type of the action's parameter.
-     * @param action The handler method for the states entry action.
+     * @param action The handler method for the state entry action.
      * @return Returns a new state container.
      */
     inline fun <reified T : Any> entry(noinline action: (T?) -> Unit): StateContainer = entry(DataAction(T::class, action))
 
     /**
-     * Sets the handler method for the states entry action.
-     * @param action The handler method for the states entry action.
+     * Sets the handler method for the state entry action.
+     * @param action The handler method for the state entry action.
      * @return Returns a new state container.
      */
     fun entry(action: () -> Unit): StateContainer = entry(Action(action))
 
     /**
-     * Sets the handler method for the states exit action.
-     * @param action The handler method for the states exit action.
+     * Sets the handler method for the state exit action.
+     * @param action The handler method for the state exit action.
      * @return Returns a new state container.
      */
     fun exit(action: IAction): StateContainer =
@@ -348,23 +348,23 @@ class StateContainer(
         )
 
     /**
-     * Sets the handler method for the states exit action.
+     * Sets the handler method for the state exit action.
      * @param T The type of the action's parameter.
-     * @param action The handler method for the states entry action.
+     * @param action The handler method for the state entry action.
      * @return Returns a new state container.
      */
     inline fun <reified T : Any> exit(noinline action: (T?) -> Unit): StateContainer = exit(DataAction(T::class, action))
 
     /**
-     * Sets the handler method for the states exit action.
-     * @param action The handler method for the states entry action.
+     * Sets the handler method for the state exit action.
+     * @param action The handler method for the state entry action.
      * @return Returns a new state container.
      */
     fun exit(action: () -> Unit): StateContainer = exit(Action(action))
 
     /**
-     * Sets the handler method for the states do in state action.
-     * @param action The handler method for the states exit action.
+     * Sets the handler method for the state do in state action.
+     * @param action The handler method for the state exit action.
      * @return Returns a new state container.
      */
     fun doInState(action: IAction): StateContainer =
@@ -378,16 +378,16 @@ class StateContainer(
         )
 
     /**
-     * Sets the handler method for the states do in state action.
+     * Sets the handler method for the state do in state action.
      * @param T The type of the action's parameter.
-     * @param action The handler method for the states exit action.
+     * @param action The handler method for the state exit action.
      * @return Returns a new state container.
      */
     inline fun <reified T : Any> doInState(noinline action: (T?) -> Unit): StateContainer = doInState(DataAction(T::class, action))
 
     /**
-     * Sets the handler method for the states do in state action.
-     * @param action The handler method for the states exit action.
+     * Sets the handler method for the state do in state action.
+     * @param action The handler method for the state exit action.
      * @return Returns a new state container.
      */
     fun doInState(action: () -> Unit): StateContainer = doInState(Action(action))
@@ -422,7 +422,7 @@ class StateContainer(
      */
     inline fun <reified E : Event, reified T : Any> transition(
         stateTo: EndState,
-        noinline guard: (T?) -> Boolean = { true },
+        noinline guard: (T?) -> Boolean,
     ): StateContainer =
         StateContainer(
             state = state,
@@ -434,7 +434,7 @@ class StateContainer(
         )
 
     /**
-     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * Adds a new transition without an event to a nested state. The event 'NoEvent' is automatically used.
      * @param stateTo A reference to the end point of this transition.
      * @param guard Condition handler of this transition.
      * @return Returns a new state container.
@@ -453,7 +453,7 @@ class StateContainer(
         )
 
     /**
-     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * Adds a new transition without an event to a nested state. The event 'NoEvent' is automatically used.
      * @param T The type of the action's parameter.
      * @param stateTo A reference to the end point of this transition.
      * @param guard Condition handler of this transition.
@@ -461,7 +461,7 @@ class StateContainer(
      */
     inline fun <reified T : Any> transitionWithoutEvent(
         stateTo: EndState,
-        noinline guard: (T?) -> Boolean = { true },
+        noinline guard: (T?) -> Boolean,
     ): StateContainer =
         StateContainer(
             state = state,
@@ -502,7 +502,7 @@ class StateContainer(
      */
     inline fun <reified E : Event, reified T : Any> transition(
         endPoint: TransitionEndPoint,
-        noinline guard: (T?) -> Boolean = { true },
+        noinline guard: (T?) -> Boolean,
     ): StateContainer =
         StateContainer(
             state = state,
@@ -514,7 +514,7 @@ class StateContainer(
         )
 
     /**
-     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * Adds a new transition without an event to a nested state. The event 'NoEvent' is automatically used.
      * @param guard Condition handler of this transition.
      * @param endPoint A reference to the end point of this transition.
      * @return Returns a new state container.
@@ -533,7 +533,7 @@ class StateContainer(
         )
 
     /**
-     * Adds a new transition without event to a nested state. The event 'NoEvent' is automatically used.
+     * Adds a new transition without an event to a nested state. The event 'NoEvent' is automatically used.
      * @param T The type of the action's parameter.
      * @param guard Condition handler of this transition.
      * @param endPoint A reference to the end point of this transition.
@@ -541,7 +541,7 @@ class StateContainer(
      */
     inline fun <reified T : Any> transitionWithoutEvent(
         endPoint: TransitionEndPoint,
-        noinline guard: (T?) -> Boolean = { true },
+        noinline guard: (T?) -> Boolean,
     ): StateContainer =
         StateContainer(
             state = state,

@@ -3,7 +3,7 @@ package io.github.frantoso.jasm
 import kotlinx.atomicfu.atomic
 
 /**
- * This class acts as base for all states of the state machine.
+ * This class acts as a base for all states of the state machine.
  * @param name The name of the state.
  */
 abstract class StateBase(
@@ -65,7 +65,7 @@ interface EndState : IState {
 }
 
 /**
- * A base class for all send state implementations.
+ * A base class for all send-state implementations.
  * @param name The name of the state.
  */
 abstract class EndStateBase(
@@ -85,7 +85,7 @@ abstract class EndStateBase(
 
 /**
  * A class to model a normal state.
- * @param name The name of the state. If the name is empty or blank the name of the class is used.
+ * @param name The name of the state. If the name is empty or blank, the name of the class is used.
  */
 open class State(
     name: String = "",
@@ -94,7 +94,7 @@ open class State(
 
 /**
  * A class to model a composite state.
- * @param name The name of the state. If the name is empty or blank the name of the class is used.
+ * @param name The name of the state. If the name is empty or blank, the name of the class is used.
  */
 abstract class CompositeState(
     name: String = "",
