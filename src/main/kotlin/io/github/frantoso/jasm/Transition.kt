@@ -40,7 +40,7 @@ data class Transition(
     internal val guard: () -> Boolean,
 ) : ITransition {
     /**
-     * Alternative initialization with state as end point.
+     * Alternative initialization with state as an end point.
      * @param eventType The type of the event that initiates this transition.
      * @param state The destination state of this transition.
      * @param guard Condition handler of this transition.
@@ -67,7 +67,7 @@ data class DataTransition<T : Any>(
     internal val guard: (T?) -> Boolean,
 ) : ITransition {
     /**
-     * Alternative initialization with state as end point.
+     * Alternative initialization with state as an end point.
      * @param eventType The type of the event that initiates this transition.
      * @param state A reference to the destination state of this transition.
      * @param guard Condition handler of this transition.

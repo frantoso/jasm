@@ -11,9 +11,9 @@ import kotlin.coroutines.CoroutineContext
  * A class managing the states of an FSM (finite state machine).
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param onTriggered Callback to be informed about a trigger of an event. This event is fired before a state
- * is changed. It should be used mainly for informational purpose.
+ * is changed. It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -41,7 +41,7 @@ abstract class Fsm(
         startStateAsList + otherStates + destinationOnlyStates(startState, otherStates) + finalStateOrNot(otherStates)
 
     /**
-     * Gets the final state (as list) or an empty list if there is no final state used in the transitions.
+     * Gets the final state (as a list) or an empty list if there is no final state used in the transitions.
      */
     private fun finalStateOrNot(otherStates: List<StateContainerBase<out IState>>): List<StateContainerBase<out IState>> =
         if ((otherStates + startStateAsList).flatMap { it.debugInterface.transitionDump }.none { it.isToFinal }) {
@@ -123,7 +123,7 @@ abstract class Fsm(
     val hasFinished get() = currentState is FinalState
 
     /**
-     * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user defined state.
+     * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user-defined state.
      * This method calls the initial states OnEntry method.
      */
     fun start() {
@@ -133,7 +133,7 @@ abstract class Fsm(
     }
 
     /**
-     * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user defined state.
+     * Starts the behavior of the Fsm class. Executes the transition from the start state to the first user-defined state.
      * This method calls the initial states OnEntry method.
      * @param T The type of the data parameter.
      * @param data The data to provide to the function.
@@ -145,7 +145,7 @@ abstract class Fsm(
     }
 
     /**
-     * Fires the parametrised Do event of the current state.
+     * Fires the parametrized Do event of the current state.
      * @param T The type of the data parameter.
      * @param data The data to provide to the function.
      */
@@ -163,23 +163,23 @@ abstract class Fsm(
     }
 
     /**
-     * Returns a string representation of the FSM - it's name.
+     * Returns the name of the FSM.
      */
     override fun toString(): String = name
 
     /**
      * Triggers a transition.
      * @param event The event occurred.
-     * @return Returns true if the event was handled; false otherwise. In case of
-     * asynchronous processing it returns true.
+     * @return Returns true if the event was handled; false otherwise. In the case of asynchronous
+     * processing, it returns true.
      */
     abstract fun trigger(event: IEvent): Boolean
 
     /**
      * Triggers a transition.
      * @param event The event occurred.
-     * @return Returns true if the event was handled; false otherwise. In case of
-     * asynchronous processing it returns true.
+     * @return Returns true if the event was handled; false otherwise. In the case of asynchronous
+     * processing, it returns true.
      */
     protected fun triggerEvent(event: IEvent): Boolean {
         synchronized(this) {
@@ -218,7 +218,7 @@ abstract class Fsm(
     private val EndState.container get() = states.first { it.state == this }
 
     /**
-     * Raises the state changed event.
+     * Raises the state-changed event.
      * @param oldState The old state.
      * @param newState The new state.
      */
@@ -253,20 +253,20 @@ abstract class Fsm(
      */
     interface Debug {
         /**
-         * Should set the provided state as active state.
-         * @param state The state to set as current state.
+         * Should set the provided state as an active state.
+         * @param state The state to set as the current state.
          */
         fun setState(state: State)
 
         /**
-         * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
-         *  - IMPORTANT: This method does not call the entry function of the state.
-         * @param state The state to set as current state.
+         * Sets the provided state as an active state and starts child machines if present, e.g., to resume after
+         * a reboot. - IMPORTANT: This method does not call the entry function of the state.
+         * @param state The state to set as the current state.
          */
         fun resume(state: State)
 
         /**
-         * Triggers a transition synchronously. Independent of the concrete implementation it calls the synchronous
+         * Triggers a transition synchronously. Independent of the concrete implementation, it calls the synchronous
          * trigger function from the base class.
          * @param event The event occurred.
          * @return Returns true if the event was handled; false otherwise.
@@ -274,7 +274,7 @@ abstract class Fsm(
         fun triggerSync(event: IEvent): Boolean
 
         /**
-         * Triggers a transition synchronously. Independent of the concrete implementation it calls the synchronous
+         * Triggers a transition synchronously. Independent of the concrete implementation, it calls the synchronous
          * trigger function from the base class.
          * @param T The type of the data parameter.
          * @param event The event occurred.
@@ -298,8 +298,8 @@ abstract class Fsm(
     }
 
     /**
-     * Sets the provided state as active state.
-     * @param state The state to set as current state.
+     * Sets the provided state as an active state.
+     * @param state The state to set as the current state.
      */
     private fun setState(state: StateContainerBase<out IState>) {
         val stateBefore = currentStateContainer
@@ -308,9 +308,9 @@ abstract class Fsm(
     }
 
     /**
-     * Sets the provided state as active state and starts child machines if present, e.g. to resume after a reboot.
+     * Sets the provided state as an active state and starts child machines if present, e.g., to resume after a reboot.
      *  - IMPORTANT: This method does not call the entry function of the state.
-     * @param state The state to set as current state.
+     * @param state The state to set as the current state.
      */
     private fun resume(state: State) {
         setState(state.container)
@@ -318,7 +318,7 @@ abstract class Fsm(
     }
 
     /**
-     * Gets an object implementing the debug interface. This allows the access to special functions which are mainly
+     * Gets an object implementing the debug interface. This allows access to special functions which are mainly
      * provided for tests.
      */
     val debugInterface =
@@ -351,9 +351,9 @@ abstract class Fsm(
  * Class managing the states of a synchronous FSM (finite state machine).
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param onTriggered Callback to be informed about a trigger of an event. This event is fired before a state
- * is changed. It should be used mainly for informational purpose.
+ * is changed. It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -388,9 +388,9 @@ class FsmSync(
  * Class managing the states of an asynchronous FSM (finite state machine).
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param onTriggered Callback to be informed about a trigger of an event. This event is fired before a state
- * is changed. It should be used mainly for informational purpose.
+ * is changed. It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -462,9 +462,9 @@ fun fsmOf(
  * Creates a synchronous FSM from the provided data.
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param onTriggered Callback to be informed about a trigger of an event. This event is fired before a state
- * is changed. It should be used mainly for informational purpose.
+ * is changed. It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -480,7 +480,7 @@ fun fsmOf(
  * Creates a synchronous FSM from the provided data.
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -507,9 +507,9 @@ fun fsmAsyncOf(
  * Creates an asynchronous FSM from the provided data.
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param onTriggered Callback to be informed about a trigger of an event. This event is fired before a state
- * is changed. It should be used mainly for informational purpose.
+ * is changed. It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */
@@ -525,7 +525,7 @@ fun fsmAsyncOf(
  * Creates an asynchronous FSM from the provided data.
  * @param name The name of the FSM.
  * @param onStateChanged Callback to be informed about a state change. - This function is called before the OnEntry
- * handler of the state is called.  It should be used mainly for informational purpose.
+ * handler of the state is called.  It should be used mainly for informational purposes.
  * @param startState The start state (first state) of the FSM.
  * @param otherStates The other states of the FSM.
  */

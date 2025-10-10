@@ -14,7 +14,7 @@ interface IAction {
 }
 
 /**
- * Dummy action doing nothing.
+ * Fake action doing nothing.
  */
 object NoAction : IAction {
     /**
@@ -54,7 +54,7 @@ class DataAction<T : Any>(
 ) : IAction {
     /**
      * Fires the action.
-     * @param data The data to provide as parameter.
+     * @param data The data to provide as a parameter.
      */
     private fun fire(data: T?) {
         try {

@@ -70,12 +70,13 @@ class StateContainerExtensionTests {
 
     @Test
     fun `adds a transition to a state and parameter-guard`() {
-        val container1 = State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2))
+        val container1 = State(TEST_STATE_1).transition<TestEvent>(State(TEST_STATE_2))
         val container2 = State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2)) { data -> data == 1 }
         val container3 = State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2)) { data -> data == 1 }
 
         assertThat(container1.hasTransitions).isTrue
-        assertThat(container1.transitions[0]).isInstanceOf(DataTransition::class.java)
+        assertThat(container1.transitions[0]).isInstanceOf(Transition::class.java)
+        assertThat(container2.transitions[0]).isInstanceOf(DataTransition::class.java)
         assertThat(container1.transitions[0].isAllowed(DataEvent(1, TestEvent::class))).isTrue
         assertThat(container2.transitions[0].isAllowed(DataEvent(1, TestEvent::class))).isTrue
         assertThat(container3.transitions[0].isAllowed(DataEvent(2, TestEvent::class))).isFalse
@@ -83,14 +84,14 @@ class StateContainerExtensionTests {
 
     @Test
     fun `adds a transition to an endpoint and parameter-guard`() {
-        val container1 = State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2).history)
+        val container1 = State(TEST_STATE_1).transition<TestEvent>(State(TEST_STATE_2).history)
         val container2 =
             State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2).history) { data -> data == 1 }
         val container3 =
             State(TEST_STATE_1).transition<TestEvent, Int>(State(TEST_STATE_2).history) { data -> data == 1 }
 
         assertThat(container1.hasTransitions).isTrue
-        assertThat(container1.transitions[0]).isInstanceOf(DataTransition::class.java)
+        assertThat(container1.transitions[0]).isInstanceOf(Transition::class.java)
         assertThat(container1.transitions[0].isAllowed(DataEvent(1, TestEvent::class))).isTrue
         assertThat(container2.transitions[0].isAllowed(DataEvent(1, TestEvent::class))).isTrue
         assertThat(container3.transitions[0].isAllowed(DataEvent(2, TestEvent::class))).isFalse
@@ -102,7 +103,7 @@ class StateContainerExtensionTests {
         val container =
             State(TEST_STATE_1)
                 .child(fsm)
-                .transitionWithoutEvent<Int>(State(TEST_STATE_2).history)
+                .transitionWithoutEvent(State(TEST_STATE_2).history)
 
         assertThat(container.hasTransitions).isTrue
         assertThat(container.hasChildren).isTrue
@@ -133,17 +134,17 @@ class StateContainerExtensionTests {
 
     @Test
     fun `adds a transition without event and parameter-guard`() {
-        val container1 = State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2))
+        val container1 = State(TEST_STATE_1).transitionWithoutEvent(State(TEST_STATE_2))
         val container2 = State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2)) { data -> data == 1 }
         val container3 = State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2)) { data -> data == 1 }
-        val container4 = State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2).history)
+        val container4 = State(TEST_STATE_1).transitionWithoutEvent(State(TEST_STATE_2).history)
         val container5 =
             State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2).history) { data -> data == 1 }
         val container6 =
             State(TEST_STATE_1).transitionWithoutEvent<Int>(State(TEST_STATE_2).history) { data -> data == 1 }
 
         assertThat(container1.hasTransitions).isTrue
-        assertThat(container1.transitions[0]).isInstanceOf(DataTransition::class.java)
+        assertThat(container1.transitions[0]).isInstanceOf(Transition::class.java)
         assertThat(container1.transitions[0].isAllowed(DataEvent(1, NoEvent::class))).isTrue
         assertThat(container2.transitions[0].isAllowed(DataEvent(1, NoEvent::class))).isTrue
         assertThat(container3.transitions[0].isAllowed(DataEvent(2, NoEvent::class))).isFalse
