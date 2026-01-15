@@ -51,9 +51,6 @@ class FsmSyncTest {
         onStateChanged: (sender: Fsm, from: IState, to: IState) -> Unit,
         onTriggered: (sender: Fsm, currentState: IState, event: IEvent, handled: Boolean) -> Unit,
     ): FsmSync {
-        val state1 = State("first")
-        val state2 = State("second")
-
         val fsm =
             fsmOf(
                 "myFsm",
@@ -383,6 +380,150 @@ class FsmSyncTest {
         fsm.debugInterface.resume(state2)
 
         assertThat(fsm.currentState).isEqualTo(state2)
+    }
+
+    @Nested
+    inner class EventHandlersTests {
+        @Test
+        fun `calls onStateChanged`() {
+            var counter = 0
+            var sender: Fsm? = null
+            var stateFrom: IState? = null
+            var stateTo: IState? = null
+            val fsm =
+                createSyncFsm(
+                    { fsm, from, to ->
+                        ++counter
+                        sender = fsm
+                        stateFrom = from
+                        stateTo = to
+                    },
+                    { _, _, _, _ -> },
+                )
+
+            fsm.start()
+
+            assertThat(counter).isEqualTo(1)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isInstanceOf(InitialState::class.java)
+            assertThat(stateTo).isEqualTo(state1)
+
+            fsm.trigger(Event1)
+
+            assertThat(counter).isEqualTo(2)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isEqualTo(state1)
+            assertThat(stateTo).isEqualTo(state2)
+
+            fsm.trigger(Tick)
+
+            assertThat(counter).isEqualTo(2)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isEqualTo(state1)
+            assertThat(stateTo).isEqualTo(state2)
+        }
+
+        @Test
+        fun `calls onStateChanged with additional handler`() {
+            var counter = 0
+            var counter2 = 0
+            var sender: Fsm? = null
+            var stateFrom: IState? = null
+            var stateTo: IState? = null
+            var stateFrom2: IState? = null
+            var stateTo2: IState? = null
+            val handler1: StateChangedEventHandler = { fsm, from, to ->
+                ++counter
+                sender = fsm
+                stateFrom = from
+                stateTo = to
+            }
+            val handler2: StateChangedEventHandler = { _, from, to ->
+                ++counter2
+                stateFrom2 = from
+                stateTo2 = to
+            }
+
+            val fsm =
+                createSyncFsm(
+                    handler1,
+                ) { _, _, _, _ -> }
+
+            fsm.start()
+
+            assertThat(counter).isEqualTo(1)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isInstanceOf(InitialState::class.java)
+            assertThat(stateTo).isEqualTo(state1)
+            assertThat(counter2).isEqualTo(0)
+            assertThat(stateFrom2).isNull()
+            assertThat(stateTo2).isNull()
+
+            fsm.stateChanged += handler2
+
+            fsm.trigger(Event1)
+
+            assertThat(counter).isEqualTo(2)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isEqualTo(state1)
+            assertThat(stateTo).isEqualTo(state2)
+            assertThat(counter2).isEqualTo(1)
+            assertThat(stateFrom2).isEqualTo(state1)
+            assertThat(stateTo2).isEqualTo(state2)
+
+            fsm.trigger(Tick)
+
+            assertThat(counter).isEqualTo(2)
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(stateFrom).isEqualTo(state1)
+            assertThat(stateTo).isEqualTo(state2)
+
+            fsm.stateChanged -= handler2
+            fsm.trigger(Event1)
+
+            assertThat(counter2).isEqualTo(1)
+            assertThat(stateFrom2).isEqualTo(state1)
+            assertThat(stateTo2).isEqualTo(state2)
+        }
+
+        @Test
+        fun `calls onTriggered`() {
+            var sender: Fsm? = null
+            var state: IState? = null
+            var event: IEvent? = null
+            var handled: Boolean? = null
+            val fsm =
+                createSyncFsm(
+                    { _, _, _ -> },
+                    { fsm, s, e, h ->
+                        sender = fsm
+                        state = s
+                        event = e
+                        handled = h
+                    },
+                )
+
+            fsm.start()
+
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(state).isInstanceOf(InitialState::class.java)
+            assertThat(event).isInstanceOf(StartEvent::class.java)
+            assertThat(handled).isTrue
+
+            fsm.trigger(Event2)
+
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(state).isEqualTo(state1)
+            assertThat(event).isEqualTo(Event2)
+            assertThat(handled).isFalse
+
+            fsm.trigger(Event1)
+
+            assertThat(sender).isEqualTo(fsm)
+            assertThat(state).isEqualTo(state1)
+            assertThat(event).isEqualTo(Event1)
+            assertThat(handled).isTrue
+        }
     }
 
     @Nested

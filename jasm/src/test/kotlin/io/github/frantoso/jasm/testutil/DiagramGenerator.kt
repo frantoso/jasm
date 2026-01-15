@@ -293,7 +293,6 @@ open class DiagramGenerator(
             when (transition.endPoint.history) {
                 History.H -> Factory.to(this.port("hist")).with(transition.label, Font.name("Arial"), Font.size(10))
                 History.Hd -> Factory.to(this.port("deep")).with(transition.label, Font.name("Arial"), Font.size(10))
-
                 else -> Factory.to(this).with(transition.label, Font.name("Arial"), Font.size(10))
             }
     }

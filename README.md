@@ -47,7 +47,7 @@ dependencies {
 ## How to: Create a simple State Machine
 
 This topic shows how to implement a simple Finite State Machine using the jasm component.
-The example shows the modelling of a single traffic light.
+The example shows the modeling of a single traffic light.
 
 ### Start with the model of the state machine
 
@@ -239,7 +239,7 @@ The output produced by both calls to `runFsm()`:
 
 | synchronous | asynchronous |
 |:-----------:|:------------:|
-|    - 42     |    - 42      |
+|    - 42     |     - 42     |
 |     + 0     |     + 0      |
 |     - 0     |     - 0      |
 |    + 10     |     + 10     |
@@ -269,7 +269,9 @@ The output produced by both calls to `runFsm()`:
 
 This library also supports nested state machines through composite states.
 
-A composite state can be build from the scratch or encapsulated in a class derived from `CompositeState`.
+A composite state can be built from the scratch or encapsulated in a class derived from `CompositeState`.  
+To see how composite states work together with the history states, look at this example:
+[How History States work](https://frantoso.github.io/jasmsharp/).
 
 ### The diagram of the nested state machine
 
@@ -279,7 +281,7 @@ A composite state can be build from the scratch or encapsulated in a class deriv
 
 ### Nested State Machine as Composite State
 
-When deriving from the `CompositeState` class, the sub state machine must be part of the state and
+When deriving from the `CompositeState` class, the sub state-machine must be part of the state and
 will be added automatically to the parent state machine when used.
 
 ```kotlin

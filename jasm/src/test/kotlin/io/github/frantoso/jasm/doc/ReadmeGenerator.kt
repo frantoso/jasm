@@ -277,7 +277,7 @@ class ReadmeGenerator {
                 +
                     """
                     This topic shows how to implement a simple Finite State Machine using the jasm component.
-                    The example shows the modelling of a single traffic light.
+                    The example shows the modeling of a single traffic light.
                     """.trimIndent()
                 subSection("Start with the model of the state machine")
                 +
@@ -437,7 +437,7 @@ class ReadmeGenerator {
 
                      || synchronous | asynchronous |
                      ||:-----------:|:------------:|
-                     ||    - 42     |    - 42      |
+                     ||    - 42     |     - 42     |
                      ||     + 0     |     + 0      |
                      ||     - 0     |     - 0      |
                      ||    + 10     |     + 10     |
@@ -469,7 +469,9 @@ class ReadmeGenerator {
                     """
                     This library also supports nested state machines through composite states.
 
-                    A composite state can be build from the scratch or encapsulated in a class derived from `CompositeState`.
+                    A composite state can be built from the scratch or encapsulated in a class derived from `CompositeState`.  
+                    To see how composite states work together with the history states, look at this example:
+                    [How History States work](https://frantoso.github.io/jasmsharp/).
                     """.trimIndent()
 
                 subSection("The diagram of the nested state machine")
@@ -483,7 +485,7 @@ class ReadmeGenerator {
                 subSection("Nested State Machine as Composite State")
                 +
                     """
-                    When deriving from the `CompositeState` class, the sub state machine must be part of the state and
+                    When deriving from the `CompositeState` class, the sub state-machine must be part of the state and
                     will be added automatically to the parent state machine when used.
                     """.trimIndent()
                 exampleFromSnippet(
@@ -516,7 +518,7 @@ class ReadmeGenerator {
         val readmePage =
             Page(
                 title = "Just another State Machine",
-                fileName = "README.md",
+                fileName = "../README.md",
             )
         readmePage.write(markdown = readmeMarkdown.value)
     }
