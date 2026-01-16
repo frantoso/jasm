@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":jasm"))
+    implementation(project(":jasm-debug-adapter"))
 }
 
 application {

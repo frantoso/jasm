@@ -1,2 +1,2 @@
 rootProject.name = "jasm"
-include("jasm", "history-example")
+include("jasm", "history-example", "jasm-debug-adapter")
