@@ -1,6 +1,4 @@
-package io.github.frantoso
-
-import io.github.frantoso.jasm.DebugAdapter
+package io.github.frantoso.jasm
 
 fun main() {
     val controller = Controller()

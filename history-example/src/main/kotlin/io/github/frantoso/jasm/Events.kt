@@ -1,6 +1,4 @@
-package io.github.frantoso
-
-import io.github.frantoso.jasm.Event
+package io.github.frantoso.jasm
 
 sealed class Events : Event() {
     object Break : Events()
