@@ -4,3 +4,5 @@ A small console application to show how different types of history affect the ex
 This application is mainly to see how to build the state machines with jasm, and how the generated code behaves.  
 
 ##### To understand the different variants of history, a visualization is available here: [How History States work](https://frantoso.github.io/jasmsharp/).
+
+This example also shows how to use the [debug-adapter](../jasm-debug-adapter/README.md).

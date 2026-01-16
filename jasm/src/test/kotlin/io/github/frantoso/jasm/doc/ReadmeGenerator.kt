@@ -230,6 +230,9 @@ class ReadmeGenerator {
 
                     This readme includes the documentation of an implementation of a ready to use FSM (Finite State Machine).
                     Using this state machine is very simple. Just define the states, the transitions and the state actions.
+                    
+                    There is also a visualisation available to see the actual state in real-time (see
+                     [debug-adapter](./jasm-debug-adapter/README.md)).
                     """.trimIndent()
 
                 section("Basic steps to create a State Machine")
