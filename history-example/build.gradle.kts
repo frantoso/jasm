@@ -9,5 +9,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("io.github.frantoso.ProgramKt")
+    mainClass.set("io.github.frantoso.jasm.ProgramKt")
 }
