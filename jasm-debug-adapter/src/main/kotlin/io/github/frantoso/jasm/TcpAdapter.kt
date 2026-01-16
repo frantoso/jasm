@@ -121,7 +121,6 @@ object TcpAdapter : Closeable {
         val stream = s.getOutputStream()
         stream.write(message.compress())
         stream.flush()
-        println("Sent: $message")
     }
 
     /**
@@ -140,7 +139,6 @@ object TcpAdapter : Closeable {
             }
 
             val message = String(buffer, 0, bytesRead, Charsets.UTF_8)
-            println("Received: $message")
 
             message.deserializeMessage()?.run { processMessage(fsm, command, payload) }
         }
@@ -158,11 +156,9 @@ object TcpAdapter : Closeable {
         command: String,
         payload: String,
     ) = commandHandlers[fsm.makeKey(command)]?.let {
-        println("Found Handler: $command")
         try {
             it(payload)
-        } catch (ex: Exception) {
-            println("Error handling command $command: $ex")
+        } catch (_: Exception) {
         }
     }
 }
