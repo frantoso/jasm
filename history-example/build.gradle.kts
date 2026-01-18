@@ -1,5 +1,5 @@
 plugins {
-    id("jasm.kotlin-conventions")
+    id("jasm.kotlin-conventions-base")
     application
 }
 
