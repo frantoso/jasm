@@ -1,11 +1,4 @@
-package io.github.frantoso
-
-import io.github.frantoso.jasm.Event
-import io.github.frantoso.jasm.FinalState
-import io.github.frantoso.jasm.Fsm
-import io.github.frantoso.jasm.State
-import io.github.frantoso.jasm.fsmOf
-import io.github.frantoso.jasm.transition
+package io.github.frantoso.jasm
 
 class MainMachine {
     private val stateFinalizing = State("Finalizing")

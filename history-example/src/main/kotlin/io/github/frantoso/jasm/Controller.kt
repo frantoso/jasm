@@ -1,7 +1,4 @@
-package io.github.frantoso
-
-import io.github.frantoso.jasm.Fsm
-import io.github.frantoso.jasm.IState
+package io.github.frantoso.jasm
 
 class Controller {
     /**

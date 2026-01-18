@@ -2,17 +2,22 @@ plugins {
     id("jasm.kotlin-conventions")
 }
 
+dependencies {
+    implementation(project(":jasm"))
+    implementation("com.google.code.gson:gson:2.13.2")
+}
+
 mavenPublishing {
     coordinates(
         groupId = "io.github.frantoso",
-        artifactId = "jasm",
+        artifactId = "jasm-debug-adapter",
     )
 
     // Configure POM metadata for the published artifact
     pom {
-        name.set("Kotlin library for implementing state machines")
-        description.set("This library can be used by JVM targets which want to implement state machines")
-        inceptionYear.set("2025")
+        name.set("jasm-debug-adapter")
+        description.set("Debug adapter for jasm-based state machines")
+        inceptionYear.set("2026")
         url.set("https://github.com/frantoso/jasm/")
 
         licenses {

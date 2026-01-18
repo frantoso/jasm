@@ -1,11 +1,4 @@
-package io.github.frantoso
-
-import io.github.frantoso.jasm.CompositeState
-import io.github.frantoso.jasm.FinalState
-import io.github.frantoso.jasm.State
-import io.github.frantoso.jasm.fsmOf
-import io.github.frantoso.jasm.transition
-import io.github.frantoso.jasm.transitionWithoutEvent
+package io.github.frantoso.jasm
 
 class Working : CompositeState() {
     private val l2Preparing = L2Preparing()
