@@ -190,11 +190,15 @@ open class DiagramGenerator(
             width: Int,
             format: Format,
         ) {
-            Graphviz
-                .fromGraph(graph)
-                .width(width)
-                .render(format)
-                .toFile(File(fileName))
+            try {
+                Graphviz
+                    .fromGraph(graph)
+                    .width(width)
+                    .render(format)
+                    .toFile(File(fileName))
+            } catch (_: Exception) {
+                // ignore, it's just a diagram
+            }
         }
 
         private val ITransition.label

@@ -75,7 +75,7 @@ class ReadmeGenerator {
         // END_FSM_CODE_SNIPPET
 
         // generate diagram picture - only for the README
-        DiagramGenerator(fsm).toSvg(fsmFileName)
+        DiagramGenerator(fsm).toSvg("../$fsmFileName")
     }
 
     // BEGIN_EVENT_DEF_CODE_SNIPPET
@@ -200,7 +200,7 @@ class ReadmeGenerator {
         assertThat(fsmNight.currentState.name).isEqualTo("Final")
 
         // generate diagram picture - only for the README
-        MultipleDiagramGenerator(trafficLight).toSvg(nestedFsmFileName, 1000)
+        MultipleDiagramGenerator(trafficLight).toSvg("../$nestedFsmFileName", 1000)
     }
 
     @Test
