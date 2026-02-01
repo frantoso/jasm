@@ -191,13 +191,12 @@ open class DiagramGenerator(
             format: Format,
         ) {
             try {
-            Graphviz
-                .fromGraph(graph)
-                .width(width)
-                .render(format)
-                .toFile(File(fileName))
-            }
-            catch (_: Exception) {
+                Graphviz
+                    .fromGraph(graph)
+                    .width(width)
+                    .render(format)
+                    .toFile(File(fileName))
+            } catch (_: Exception) {
                 // ignore, it's just a diagram
             }
         }
